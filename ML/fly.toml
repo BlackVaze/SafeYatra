@@ -1,0 +1,10 @@
+app = "safeyatra-demo"   # change name if you want
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+
+[vm]
+  memory = "1024mb"
+  cpu_kind = "shared"
+  cpus = 1
