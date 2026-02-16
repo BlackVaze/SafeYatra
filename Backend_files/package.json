@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "tech_back/index.js",
   "scripts": {
-    "dev": "nodemon tech_back/index.js"
+    "dev": "nodemon tech_back/index.js",
+    "start": "node tech_back/index.js"
   },
   "keywords": [],
   "author": "",
