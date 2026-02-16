@@ -12,7 +12,6 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const __dirname = path.resolve();
 
 // Twilio configuration
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -27,6 +26,11 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+//Root route
+app.get("/", (req, res) => {
+  res.send("Backend running 🚀");
+});
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -51,18 +55,16 @@ app.post("/api/send-message", (req, res) => {
     .catch(err => res.status(500).send({ success: false, error: err.message }));
 });
 
-// Production setup
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "/frontend/dist")));
-  app.get("*", (req, res) => {
-    res.sendFile(path.resolve(__dirname, "frontend", "dist", "index.html"));
-  });
-}
-
 // Server start
-app.listen(PORT, () => {
-  connectDB();
-  console.log(`Server is running on port: ${PORT}`);
-});
+connectDB()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server is running on port: ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("Database connection failed:", err);
+  });
+
 
 export default app;
