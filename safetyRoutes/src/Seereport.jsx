@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import API from './api/axios';
 import { Link } from 'react-router-dom';
 
 const Seereport = () => {
@@ -9,7 +9,7 @@ const Seereport = () => {
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/reports/all');
+        const response = await API.get('/api/reports/all');
         setReports(response.data);
       } catch (error) {
         console.error('Error fetching reports:', error);

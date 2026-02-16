@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import API from "./api/axios";
 
 const LoginPage = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -20,11 +20,7 @@ const LoginPage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', input, {
-        headers: { 'Content-Type': 'application/json' },
-        withCredentials: true,
-      });
-
+      const res = await API.post('/api/auth/login',input);
       if (res.data.success) {
         navigate('/LandingPage2');
         setInput({ email: '', password: '' });

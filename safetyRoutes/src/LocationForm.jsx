@@ -7,7 +7,7 @@ const LocationForm = () => {
   const [coordinates, setCoordinates] = useState(null);
   const [error, setError] = useState(null);
 
-  const GOOGLE_API_KEY = "AIzaSyC_UyL76JWgPVAba9PRaEPvwxhLFDQUKDM"; // Replace with your actual Google Maps API key
+  const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 
   const getCoordinates = async (location) => {
     try {

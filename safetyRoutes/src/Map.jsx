@@ -31,8 +31,8 @@ const Map = () => {
   const [coordString, setCoordString] = useState('');
   const [parsedCoords, setParsedCoords] = useState(null);
   const [response, setResponse] = useState(null);
-  // const GOOGLE_API_KEY = "AIzaSyC_UyL76JWgPVAba9PRaEPvwxhLFDQUKDM";
-  const GOOGLE_API_KEY = "AIzaSyD32p890-08U7Y-SbcQeTVhvfz5FJY9Bmo";
+
+  const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_GEOCODE_KEY;
 
   // --- START OF CHANGES FOR CRIME HOTSPOTS ---
 
@@ -203,21 +203,21 @@ const Map = () => {
       setError(''); // Reset any previous errors
 
       // Send the parsed coordinates to the FastAPI backend
-      const response = await fetch("http://127.0.0.1:8000/safe_route", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ "start": startCoords, "end": parsed_end }), // send the parsed coordinates as origin and destination
-      });
+      const response = await fetch("https://subham-28-safeyatra-fastapi.hf.space/safe_route",
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ start: startCoords, end: parsed_end }),
+  }
+);
 
-      const alt_response = await fetch("http://127.0.0.1:8000/alt_route", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ "start": startCoords, "end": parsed_end }), // send the parsed coordinates as origin and destination
-      });
+      const alt_response = await fetch("https://subham-28-safeyatra-fastapi.hf.space/alt_route",
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ start: startCoords, end: parsed_end }),
+  }
+);
     
       const alt_data = await alt_response.json();
       let alt_route = [];

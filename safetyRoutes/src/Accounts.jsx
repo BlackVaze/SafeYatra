@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from "react-router-dom";
-import axios from "axios"
+import API from "./api/axios";
+
 const ProfilePage = () => {
   const navigate = useNavigate();
   const [darkMode, setDarkMode] = useState(true);
@@ -26,7 +27,7 @@ const ProfilePage = () => {
   };
 const getUser = async () => {
 try {
-  const res= await axios.get("http://localhost:5000/api/auth/getuser",{withCredentials:true})
+  const res = await API.get("/api/auth/getuser");
   if(res.data.success){
     setProfile(res.data.user)
   }

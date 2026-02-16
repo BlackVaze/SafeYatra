@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from "axios"
+import API from "./api/axios";
 
 const SignUpForm = () => {
   const navigate = useNavigate();
@@ -64,20 +64,13 @@ const SignUpForm = () => {
       return;
     }
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/register', {
+      const res = await API.post('/api/auth/register', {
         username: formData.username,
-        email: formData.email,
-        password: formData.password
-      }, {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        withCredentials: true,
+         email: formData.email,
+          password: formData.password
       });
       navigate('/login');
 
-
-      // }
     } catch (error) {
       console.error('Submission error:', error);
     } finally {

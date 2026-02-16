@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Toast from "../toast"
-import axios from 'axios';
+import API from '../api/axios'; // Import the API module
+import axios from "axios";
 import L from 'leaflet'; // Import Leaflet
 import 'leaflet/dist/leaflet.css'; // Import Leaflet styles
 
@@ -46,7 +47,7 @@ const RouteForm = ({ setShowRouteDialog }) => {
       setError(''); // Reset any previous errors
 
       // Send the parsed coordinates to the FastAPI backend
-      const response = await fetch("http://127.0.0.1:8000/safe_route", {
+      const response = await fetch("https://subham-28-safeyatra-fastapi.hf.space/safe_route",, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

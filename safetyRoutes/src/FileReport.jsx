@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import API from "./api/axios";
 import Toast from "./toast"
 
 const FileReport = () => {
@@ -14,7 +14,7 @@ const FileReport = () => {
     event.preventDefault();
     try {
       const reportData = { location, time, crime, description };
-      const response = await axios.post('http://localhost:5000/api/reports/submit', reportData);
+      const response = await API.post('/api/reports/submit', reportData);
       // alert(response.data.message);
       Toast.success(response.data.message);
 
@@ -32,7 +32,8 @@ const FileReport = () => {
 
   const fetchReports = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/reports/all');
+      const response = await API.get('/api/reports/all');
+
       setReports(response.data);
     } catch (error) {
       console.error('Error fetching reports:', error);
