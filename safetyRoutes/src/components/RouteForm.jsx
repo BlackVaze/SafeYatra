@@ -47,7 +47,7 @@ const RouteForm = ({ setShowRouteDialog }) => {
       setError(''); // Reset any previous errors
 
       // Send the parsed coordinates to the FastAPI backend
-      const response = await fetch("https://subham-28-safeyatra-fastapi.hf.space/safe_route",, {
+      const response = await fetch("https://subham-28-safeyatra-fastapi.hf.space/safe_route", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -75,7 +75,7 @@ const RouteForm = ({ setShowRouteDialog }) => {
 
   // Function to fetch coordinates for a place name
   const fetchCoordinates = async (place) => {
-    const apiKey = 'AIzaSyC_UyL76JWgPVAba9PRaEPvwxhLFDQUKDM'; // Replace with your Google API key
+    const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${place}&key=${apiKey}`;
 
     try {
