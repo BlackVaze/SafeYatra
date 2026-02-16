@@ -20,11 +20,6 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const phoneNumber = process.env.TWILIO_PHONE_NUMBER;
 const client = twilio(accountSid, authToken);
 
-console.log("SID:", process.env.TWILIO_ACCOUNT_SID);
-console.log("Token:", process.env.TWILIO_AUTH_TOKEN);
-console.log("Phone:", process.env.TWILIO_PHONE_NUMBER);
-
-
 // Middleware
 app.use(cors({ origin: "http://localhost:5173", credentials: true }));
 app.use(express.json());
