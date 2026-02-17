@@ -11,26 +11,6 @@ Key Features:
 5. Authentication & secure API integration
 6. Fully deployed full-stack architecture
 
-For Local Setup:
-# Clone repo
-git clone https://github.com/yourusername/safeyatra.git
-
-# Frontend
-cd frontend
-npm install
-npm run dev
-
-# Backend
-cd backend
-npm install
-npm start
-
-# ML Service
-cd ML
-pip install -r requirements.txt
-uvicorn main:app --reload
-
-
 Future Improvements:
 1. Real-time crime data integration
 2. Performance optimization for large maps
