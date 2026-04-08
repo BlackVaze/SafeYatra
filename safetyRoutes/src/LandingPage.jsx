@@ -556,10 +556,6 @@ const LandingPage = () => {
     ? "bg-gray-900 text-white hover:bg-gray-700 shadow-lg shadow-gray-900/20"
     : "bg-white text-gray-900 hover:bg-gray-100 shadow-lg shadow-white/10";
 
-  const outlineBtn = light
-    ? "border border-gray-200 text-gray-700 hover:bg-gray-100"
-    : "border border-white/15 text-gray-300 hover:bg-white/8 hover:text-white";
-
   const toggleBg = light ? "bg-gray-200" : "bg-white/15";
 
   const statCard = light
@@ -601,7 +597,7 @@ const LandingPage = () => {
 
       <RouteAnimation light={light} />
 
-      {/* ── Navbar: 3-column grid — Logo | Nav Links | Controls ── */}
+      {/* ── Navbar ── */}
       <motion.nav
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -759,7 +755,7 @@ const LandingPage = () => {
 
           <motion.div
             variants={item}
-            className="flex flex-col sm:flex-row gap-3 justify-center items-center mb-8"
+            className="flex justify-center items-center mb-8"
           >
             <motion.button
               whileHover={{ scale: 1.03 }}
@@ -774,14 +770,6 @@ const LandingPage = () => {
                 />
               </svg>
               {t.getDirections}
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => navigate("/how")}
-              className={`h-11 px-7 rounded-xl text-sm font-semibold transition-all duration-200 ${outlineBtn}`}
-            >
-              {t.howItWorks}
             </motion.button>
           </motion.div>
 
