@@ -379,7 +379,7 @@ export default function HowItWorks() {
                 </div>
               </div>
 
-              <div className="detail-right" style={{ padding:'36px 32px', display:'flex', flexDirection:'column', justifyContent:'center', gap:18 }}>
+              {/* <div className="detail-right" style={{ padding:'36px 32px', display:'flex', flexDirection:'column', justifyContent:'center', gap:18 }}>
                 <p style={{ fontSize:15, lineHeight:1.82, color:t2 }}>{step.detail}</p>
                 <div style={{ display:'flex', gap:11, alignItems:'flex-start', background:surf2, borderRadius:12, padding:'13px 15px', border:`1px solid ${border}` }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0, marginTop:2 }}>
@@ -402,7 +402,31 @@ export default function HowItWorks() {
                     Next step →
                   </button>
                 </div>
-              </div>
+              </div> */}
+              <div className="detail-right" style={{ padding:'28px 24px', display:'flex', flexDirection:'column', justifyContent:'center', gap:18, minHeight:220 }}>
+  <p style={{ fontSize:15, lineHeight:1.82, color:t2 }}>{step.detail}</p>
+  <div style={{ display:'flex', gap:11, alignItems:'flex-start', background:surf2, borderRadius:12, padding:'13px 15px', border:`1px solid ${border}` }}>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={G} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink:0, marginTop:2 }}>
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+    </svg>
+    <p style={{ fontSize:13, color:t2, lineHeight:1.65 }}>{step.tip}</p>
+  </div>
+  <div style={{ display:'flex', gap:8 }}>
+    <button className="nbtn" disabled={active===0} onClick={()=>setActive(a=>Math.max(0,a-1))}
+      style={{ flex:1, padding:'9px 0', borderRadius:10, border:`1px solid ${border}`,
+        background:'transparent', color:t1, fontSize:13, fontWeight:600,
+        opacity:active===0?.3:1, cursor:'pointer' }}>
+      ← Prev
+    </button>
+    <button className="nbtn" disabled={active===STEPS.length-1} onClick={()=>setActive(a=>Math.min(STEPS.length-1,a+1))}
+      style={{ flex:2, padding:'9px 0', borderRadius:10, border:'none',
+        background:G, color:'#fff', fontSize:13, fontWeight:700,
+        opacity:active===STEPS.length-1?.4:1, cursor:'pointer',
+        boxShadow:active===STEPS.length-1?'none':'0 4px 18px rgba(16,185,129,.4)' }}>
+      Next step →
+    </button>
+  </div>
+</div>
             </div>
 
             {/* STEP MAP */}
@@ -458,16 +482,6 @@ export default function HowItWorks() {
 
           <footer style={{ borderTop:`1px solid ${border}`, padding:'14px 32px', display:'flex', justifyContent:'center', alignItems:'center', gap:20, flexWrap:'wrap', fontSize:12, color:t3 }}>
             <span>© 2025 SafeYatra. All rights reserved.</span>
-            <span style={{ display:'flex', gap:4 }}>
-              {['English','हिंदी'].map(l=>(
-                <button key={l} className="langbtn"
-                  style={{ background:'none', border:'none', color:t3, fontSize:12, cursor:'pointer', padding:'2px 8px', borderRadius:6 }}
-                  onMouseEnter={e=>{e.currentTarget.style.color=t1;e.currentTarget.style.background=border;}}
-                  onMouseLeave={e=>{e.currentTarget.style.color=t3;e.currentTarget.style.background='none';}}>
-                  {l}
-                </button>
-              ))}
-            </span>
           </footer>
         </div>
       </div>
