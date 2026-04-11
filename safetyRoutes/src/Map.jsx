@@ -756,7 +756,7 @@ export default function Map() {
           if (!start) start = timestamp;
 
           const elapsed = timestamp - start;
-          const scale = (Math.sin(elapsed / 400) + 1) / 2; 
+          const scale = (Math.sin(elapsed / 400) + 1) / 2;
 
           const radius = 8 + scale * 10; // 8 → 18
           const opacity = 0.3 + scale * 0.5;
@@ -1107,19 +1107,9 @@ export default function Map() {
       <div style={{ position: "absolute", top: 12, right: 14, zIndex: 40 }}>
         <ThemeToggle dark={dark} onClick={() => setDark((v) => !v)} />
       </div>
-
-      {/* ── Bottom-right FABs ── */}
       <div
-        style={{
-          position: "absolute",
-          bottom: 28,
-          right: 14,
-          zIndex: 20,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 10,
-        }}
+        className="absolute right-2 sm:right-4 z-20 flex flex-col items-center gap-2"
+        style={{ top: "60%" }}
       >
         <HelpButton />
       </div>
