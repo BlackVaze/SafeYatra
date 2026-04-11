@@ -1,866 +1,1444 @@
-import { useEffect, useState } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-import { useNavigate } from "react-router-dom";
-import { Link } from 'react-router-dom';
-import RouteForm from './components/RouteForm';
-import HelpButton from './HelpButton';
-import axios from 'axios';
-import { List } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Link } from "react-router-dom";
+import HelpButton from "./HelpButton";
 import PoliceStationsPopup from "./PoliceStationsPopup";
-import Toast from "./toast";
+import "leaflet/dist/leaflet.css";
 
+// ─── Design tokens ────────────────────────────────────────────────────────────
+const ACCENT = "#2563eb";
+const ACCENT_HOVER = "#1d4ed8";
+const ACCENT_GLOW = "rgba(37,99,235,0.2)";
+const SUCCESS = "#22c55e";
+const DANGER = "#ef4444";
 
-const Map = () => {
-  //const navigate = useNavigate();
+const DARK = {
+  bg: "rgba(13,17,23,0.94)",
+  surface: "#161b22",
+  elevated: "#1c2128",
+  border: "rgba(255,255,255,0.08)",
+  text: "#e6edf3",
+  muted: "#7d8590",
+};
+const LIGHT = {
+  bg: "rgba(255,255,255,0.94)",
+  surface: "#ffffff",
+  elevated: "#f0f2f5",
+  border: "rgba(0,0,0,0.1)",
+  text: "#1f2328",
+  muted: "#656d76",
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function th(dark) {
+  return dark ? DARK : LIGHT;
+}
+
+// ─── Close button ─────────────────────────────────────────────────────────────
+function CloseBtn({ dark, onClick }) {
+  const [hov, setHov] = useState(false);
+  const t = th(dark);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        width: 30,
+        height: 30,
+        borderRadius: 8,
+        border: "none",
+        cursor: "pointer",
+        background: hov ? t.elevated : "transparent",
+        color: t.muted,
+        fontSize: 16,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transition: "background 0.15s",
+      }}
+    >
+      ✕
+    </button>
+  );
+}
+
+// ─── Modal ────────────────────────────────────────────────────────────────────
+function Modal({ dark, title, onClose, children }) {
+  const t = th(dark);
+  useEffect(() => {
+    const h = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
+        background: "rgba(0,0,0,0.55)",
+        backdropFilter: "blur(4px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        style={{
+          width: "min(440px, 92vw)",
+          borderRadius: 16,
+          overflow: "hidden",
+          background: t.surface,
+          border: `1px solid ${t.border}`,
+          boxShadow: "0 24px 60px rgba(0,0,0,0.4)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "16px 20px",
+            borderBottom: `1px solid ${t.border}`,
+            color: t.text,
+            fontWeight: 600,
+            fontSize: 15,
+          }}
+        >
+          <span>{title}</span>
+          <CloseBtn dark={dark} onClick={onClose} />
+        </div>
+        <div
+          style={{
+            padding: "18px 20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+          }}
+        >
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Styled input ─────────────────────────────────────────────────────────────
+function Input({
+  dark,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  autoFocus,
+}) {
+  const [focused, setFocused] = useState(false);
+  const t = th(dark);
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      autoFocus={autoFocus}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={{
+        width: "100%",
+        padding: "10px 12px",
+        borderRadius: 10,
+        border: `1px solid ${focused ? ACCENT : t.border}`,
+        background: t.elevated,
+        color: t.text,
+        fontSize: 14,
+        outline: "none",
+        fontFamily: "inherit",
+        boxSizing: "border-box",
+        boxShadow: focused ? `0 0 0 3px ${ACCENT_GLOW}` : "none",
+        transition: "border-color 0.15s, box-shadow 0.15s",
+      }}
+    />
+  );
+}
+
+// ─── Label ────────────────────────────────────────────────────────────────────
+function Label({ dark, children }) {
+  return (
+    <label
+      style={{
+        display: "block",
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: "0.07em",
+        textTransform: "uppercase",
+        color: th(dark).muted,
+        marginBottom: 6,
+      }}
+    >
+      {children}
+    </label>
+  );
+}
+
+// ─── Saved Locations ──────────────────────────────────────────────────────────
+function SavedPopup({ dark, savedAddresses, onSave, onClose }) {
+  return (
+    <Modal dark={dark} title="⭐  Saved Locations" onClose={onClose}>
+      {savedAddresses.map((addr, i) => (
+        <div key={i}>
+          <Label dark={dark}>Location {i + 1}</Label>
+          <Input
+            dark={dark}
+            value={addr}
+            onChange={(e) => onSave(i, e.target.value)}
+            placeholder={`Saved location ${i + 1}`}
+          />
+        </div>
+      ))}
+    </Modal>
+  );
+}
+
+// ─── Recent Locations ─────────────────────────────────────────────────────────
+function RecentPopup({ dark, recentAddresses, onClose }) {
+  const t = th(dark);
+  return (
+    <Modal dark={dark} title="🕘  Recent Locations" onClose={onClose}>
+      {recentAddresses.map((addr, i) => (
+        <div
+          key={i}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: t.elevated,
+            color: t.text,
+            fontSize: 14,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <span style={{ opacity: 0.4 }}>📍</span> {addr}
+        </div>
+      ))}
+    </Modal>
+  );
+}
+
+// ─── Emergency Contacts ───────────────────────────────────────────────────────
+function PhonePopup({ dark, phoneNumbers, onUpdate, onClose }) {
+  return (
+    <Modal dark={dark} title="📞  Emergency Contacts" onClose={onClose}>
+      {phoneNumbers.map((num, i) => (
+        <div key={i}>
+          <Label dark={dark}>
+            {i === 0 ? "Emergency (911)" : `Contact ${i}`}
+          </Label>
+          <Input
+            dark={dark}
+            value={num}
+            onChange={(e) => onUpdate(i, e.target.value)}
+            placeholder="Phone number"
+            type="tel"
+          />
+        </div>
+      ))}
+    </Modal>
+  );
+}
+
+// ─── Route Dialog ─────────────────────────────────────────────────────────────
+function RouteDialog({
+  dark,
+  startLocation,
+  endLocation,
+  onChangeStart,
+  onChangeEnd,
+  onSubmit,
+  onClose,
+  loading,
+}) {
+  const t = th(dark);
+  const [hovCancel, setHovCancel] = useState(false);
+  const canSubmit = !loading && endLocation.trim().length > 0;
+
+  return (
+    <Modal dark={dark} title="🗺  Plan Your Safe Route" onClose={onClose}>
+      <form
+        onSubmit={onSubmit}
+        style={{ display: "flex", flexDirection: "column", gap: 14 }}
+      >
+        <div>
+          <Label dark={dark}>Starting point</Label>
+          <Input
+            dark={dark}
+            value={startLocation}
+            onChange={(e) => onChangeStart(e.target.value)}
+            placeholder="lat,lng — e.g. 41.8781,-87.6298"
+            autoFocus
+          />
+          <div style={{ fontSize: 11, color: t.muted, marginTop: 5 }}>
+            Leave empty to use your current GPS location
+          </div>
+        </div>
+        <div>
+          <Label dark={dark}>Destination</Label>
+          <Input
+            dark={dark}
+            value={endLocation}
+            onChange={(e) => onChangeEnd(e.target.value)}
+            placeholder="lat,lng — e.g. 41.9163,-87.6559"
+          />
+        </div>
+
+        {/* Info box */}
+        <div
+          style={{
+            padding: "10px 12px",
+            borderRadius: 10,
+            background: "rgba(37,99,235,0.08)",
+            border: "1px solid rgba(37,99,235,0.18)",
+            fontSize: 12,
+            color: ACCENT,
+            lineHeight: 1.55,
+          }}
+        >
+          💡 <strong>Green</strong> = safest route ·{" "}
+          <strong>Blue/purple</strong> = alternate routes
+        </div>
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button
+            type="button"
+            onClick={onClose}
+            onMouseEnter={() => setHovCancel(true)}
+            onMouseLeave={() => setHovCancel(false)}
+            style={{
+              padding: "10px 16px",
+              borderRadius: 10,
+              border: `1px solid ${t.border}`,
+              background: hovCancel ? t.elevated : "transparent",
+              color: t.text,
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              transition: "background 0.15s",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            style={{
+              padding: "10px 20px",
+              borderRadius: 10,
+              border: "none",
+              background: canSubmit ? ACCENT : t.elevated,
+              color: canSubmit ? "#fff" : t.muted,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: canSubmit ? "pointer" : "not-allowed",
+              fontFamily: "inherit",
+              transition: "background 0.15s, opacity 0.15s",
+            }}
+          >
+            {loading ? "Finding route…" : "Get Safe Route →"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// ─── Sidebar nav button ───────────────────────────────────────────────────────
+function NavBtn({ dark, icon, label, sidebarOpen, onClick, active }) {
+  const [hov, setHov] = useState(false);
+  const t = th(dark);
+  const bg = active ? "rgba(37,99,235,0.15)" : hov ? t.elevated : "transparent";
+  const color = active ? ACCENT : t.text;
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      title={label}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "10px 14px",
+        borderRadius: 10,
+        margin: "2px 8px",
+        border: "none",
+        background: bg,
+        color,
+        fontSize: 14,
+        fontWeight: 500,
+        cursor: "pointer",
+        fontFamily: "inherit",
+        width: "calc(100% - 16px)",
+        textAlign: "left",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        transition: "background 0.15s, color 0.15s",
+      }}
+    >
+      <span
+        style={{ fontSize: 18, flexShrink: 0, width: 22, textAlign: "center" }}
+      >
+        {icon}
+      </span>
+      <span
+        style={{
+          overflow: "hidden",
+          whiteSpace: "nowrap",
+          maxWidth: sidebarOpen ? 140 : 0,
+          opacity: sidebarOpen ? 1 : 0,
+          transition: "max-width 0.25s ease, opacity 0.2s ease",
+        }}
+      >
+        {label}
+      </span>
+    </button>
+  );
+}
+
+// ─── Route Legend ─────────────────────────────────────────────────────────────
+function RouteLegend({ dark, visible, sidebarW }) {
+  if (!visible) return null;
+  const t = th(dark);
+  const items = [
+    { color: SUCCESS, label: "Safest route" },
+    { color: "#6a7fdb", label: "Alternate 1" },
+    { color: "#c38d94", label: "Alternate 2" },
+    { color: "#7b4b94", label: "Alternate 3" },
+  ];
+  return (
+    <div
+      style={{
+        position: "absolute",
+        bottom: 36,
+        left: sidebarW + 12,
+        zIndex: 20,
+        padding: "12px 16px",
+        borderRadius: 12,
+        background: dark ? "rgba(22,27,34,0.92)" : "rgba(255,255,255,0.92)",
+        border: `1px solid ${t.border}`,
+        backdropFilter: "blur(10px)",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+        transition: "left 0.28s",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          color: t.muted,
+          marginBottom: 8,
+        }}
+      >
+        Route Legend
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+        {items.map((it) => (
+          <div
+            key={it.label}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 12,
+              color: t.text,
+            }}
+          >
+            <div
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                background: it.color,
+                flexShrink: 0,
+              }}
+            />
+            {it.label}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function Toast({ message, type, onDismiss }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 4500);
+    return () => clearTimeout(t);
+  }, [onDismiss]);
+
+  const bg = type === "success" ? SUCCESS : DANGER;
+  return (
+    <div
+      style={{
+        position: "absolute",
+        bottom: 36,
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 500,
+        background: bg,
+        color: "#fff",
+        padding: "12px 20px",
+        borderRadius: 12,
+        fontSize: 13,
+        fontWeight: 600,
+        boxShadow: `0 4px 24px ${bg}55`,
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        whiteSpace: "nowrap",
+        maxWidth: "90vw",
+      }}
+    >
+      <span>
+        {type === "success" ? "✓" : "⚠"} {message}
+      </span>
+      <button
+        onClick={onDismiss}
+        style={{
+          background: "none",
+          border: "none",
+          color: "#fff",
+          cursor: "pointer",
+          fontSize: 18,
+          lineHeight: 1,
+          padding: 0,
+        }}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
+// ─── Loading overlay ──────────────────────────────────────────────────────────
+function LoadingOverlay({ dark }) {
+  const t = th(dark);
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 200,
+        background: "rgba(0,0,0,0.4)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        backdropFilter: "blur(3px)",
+      }}
+    >
+      <div
+        style={{
+          padding: "28px 36px",
+          borderRadius: 16,
+          textAlign: "center",
+          background: t.surface,
+          border: `1px solid ${t.border}`,
+          color: t.text,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+        }}
+      >
+        <div style={{ fontSize: 36, marginBottom: 12 }}>🛡</div>
+        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>
+          Finding safest route…
+        </div>
+        <div style={{ fontSize: 12, color: t.muted, marginBottom: 16 }}>
+          Analyzing crime data in your area
+        </div>
+        <div
+          style={{
+            height: 4,
+            borderRadius: 2,
+            background: t.elevated,
+            overflow: "hidden",
+            width: 200,
+          }}
+        >
+          <style>{`
+            @keyframes loadbar { 0%{margin-left:-40%;width:40%} 60%{margin-left:60%;width:40%} 100%{margin-left:100%;width:0} }
+            .sy-loadbar { animation: loadbar 1.4s ease-in-out infinite; height: 100%; background: ${ACCENT}; border-radius: 2px; }
+          `}</style>
+          <div className="sy-loadbar" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Map Component
+// ═══════════════════════════════════════════════════════════════════════════════
+export default function Map() {
+  const [dark, setDark] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Route
   const [showRouteDialog, setShowRouteDialog] = useState(false);
-  const [startLocation, setStartLocation] = useState('');
-  const [endLocation, setEndLocation] = useState('');
-  const [map, setMap] = useState(null);
-  const [L, setL] = useState(null);
-  const [routeLayer, setRouteLayer] = useState(null);
-  const [darkMode, setDarkMode] = useState(true);
-  const [location, setLocation] = useState("");
-  const [coordinates, setCoordinates] = useState(null);
-  const [error, setError] = useState(null);
-  // const [showPolicePopup, setShowPolicePopup] = useState(false);
+  const [startLocation, setStartLocation] = useState("");
+  const [endLocation, setEndLocation] = useState("");
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [routeVisible, setRouteVisible] = useState(false);
 
-  const [startCoords, setStartCoords] = useState(null);
-  const [endCoords, setEndCoords] = useState(null);
-  const [coordString, setCoordString] = useState('');
-  const [parsedCoords, setParsedCoords] = useState(null);
-  const [response, setResponse] = useState(null);
+  // Map refs — never trigger re-renders
+  const mapRef = useRef(null);
+  const leafletRef = useRef(null);
+  const routeLayersRef = useRef([]);
+  const hotspotRef = useRef(null);
 
-  const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_GEOCODE_KEY;
-
-  // --- START OF CHANGES FOR CRIME HOTSPOTS ---
-
-  // State to manage hotspot visibility and layer reference
+  // Hotspots
   const [hotspotsVisible, setHotspotsVisible] = useState(false);
-  const [hotspotLayer, setHotspotLayer] = useState(null);
-  // --- END OF CHANGES FOR CRIME HOTSPOTS ---
 
-
-  const getCoordinates = async (location) => {
-    try {
-      const response = await axios.get("https://maps.googleapis.com/maps/api/geocode/json", {
-        params: {
-          address: location,
-          key: GOOGLE_API_KEY,
-        },
-      });
-
-      if (response.data.results.length > 0) {
-        const { lat, lng } = response.data.results[0].geometry.location;
-        const coords = [lat, lng];
-        setCoordinates({ lat, lng });
-        setError(null);
-        console.log(coords);
-        // return coords;
-      } else {
-        setError("Location not found.");
-        setCoordinates(null);
-      }
-    } catch (err) {
-      setError("Error fetching data. Please try again.");
-      setCoordinates(null);
-    }
-  };
-
-
-
-  // Popup states
-  const [showSavedPopup, setShowSavedPopup] = useState(false);
-  const [showRecentPopup, setShowRecentPopup] = useState(false);
-  const [showPhonePopup, setShowPhonePopup] = useState(false);
-  const [showPolicePopup, setShowPolicePopup] = useState(false);
-
-
-  // Demo data
-  const [savedAddresses, setSavedAddresses] = useState([
-    '', '', '', '', ''  // 5 empty slots
-  ]);
-
-
-  const parseCoordinates = (coordString) => {
-    try {
-      let coords = coordString.replace(/[()]/g, "").split(",");
-
-      // Convert string values to float
-      let lat = parseFloat(coords[0].trim());
-      let lon = parseFloat(coords[1].trim());
-
-      // Check if parsed values are valid numbers
-      if (isNaN(lat) || isNaN(lon)) {
-        throw new Error("Invalid coordinate format");
-      }
-
-      return [lat, lon]; // Return as an array of floats
-    } catch (error) {
-      throw new Error("Invalid coordinate format");
-    }
-  };
-
-
-  // --- START OF CHANGES FOR CRIME HOTSPOTS ---
-  // Replaced original handleClick with a toggle function
-  const handleHotspotToggle = () => {
-    // If markers are already visible, remove them and reset state
-    if (hotspotsVisible) {
-      if (hotspotLayer && map) {
-        map.removeLayer(hotspotLayer);
-      }
-      setHotspotLayer(null);
-      setHotspotsVisible(false);
-      return; // Exit function
-    }
-
-    // If markers are NOT visible, create and add them
-    const clusters = [
-      [41.7505, -87.6018],
-      [41.9163, -87.6559],
-      [41.7751, -87.6794],
-      [41.9072, -87.7440],
-      [41.8000, -87.6200],
-      [41.8300, -87.6500],
-    ];
-
-    // Create an array of Leaflet layers
-    const markerLayers = clusters.map(cluster => {
-      return L.circleMarker(cluster, {
-        color: 'red',
-        weight: 1,
-        radius: 10,
-        fillColor: 'red',
-        fillOpacity: 0.4,
-        opacity: 0.8,
-        className: 'pulsing-hotspot' // Add this class name
-      });
-    });
-
-    // Create a single LayerGroup to manage all markers at once
-    const newLayerGroup = L.layerGroup(markerLayers).addTo(map);
-
-    // Update state to track the new layer and its visibility
-    setHotspotLayer(newLayerGroup);
-    setHotspotsVisible(true);
-  };
-  // --- END OF CHANGES FOR CRIME HOTSPOTS ---
-
-
-  // Handle form submission and POST request to FastAPI
-  const handleSubmit = async (e) => {
-    setShowRouteDialog(false)
-    e.preventDefault();
-
-    if (location.trim()) {
-      getCoordinates(startLocation);
-    }
-
-    // let startCoords = startLocation || null; 
-    let startCoords = startLocation.split(",").map(x => parseFloat(x.trim()));
-    // let endCoords = endLocation;
-    try {
-      // Parse coordinates from input string
-      try {
-
-        if (startCoords != null) {
-          // startCoords= await getCoordinates(startCoords);
-        }
-        else {
-          // Get user GPS coordinates for starting location
-          if ((!startCoords || !startCoords.trim()) && navigator.geolocation) {
-            await new Promise((resolve, reject) => {
-              navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  startCoords = [parseFloat(position.coords.latitude), parseFloat(position.coords.longitude)];
-                  resolve();
-                },
-                (error) => {
-                  console.error("Error getting start location:", error);
-                  reject(error);
-                },
-                { enableHighAccuracy: true }
-              );
-            });
-          }
-        }
-      }
-      catch (error) {
-        console.error("Error handling form submission:", error);
-      }
-
-
-      console.log(startCoords);
-      // console.log(endLocation);
-      // const parsed_end = await getCoordinates(endLocation);
-
-
-      let parsed_end = endLocation.split(",").map(x => parseFloat(x.trim()));
-      console.log(parsed_end);
-      //setParsedCoords(parsed); // Store parsed coordinates
-      setError(''); // Reset any previous errors
-
-      // Send the parsed coordinates to the FastAPI backend
-      const response = await fetch("https://subham-28-safeyatra-fastapi.hf.space/safe_route",
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ start: startCoords, end: parsed_end }),
-  }
-);
-
-      const alt_response = await fetch("https://subham-28-safeyatra-fastapi.hf.space/alt_route",
-  {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ start: startCoords, end: parsed_end }),
-  }
-);
-    
-      const alt_data = await alt_response.json();
-      let alt_route = [];
-      if (Object.keys(alt_data).length == 1) {
-        alt_route.push(alt_data["alternate_routes"]);
-      }
-
-      else if (Object.keys(alt_data).length == 2) {
-        alt_route.push(alt_data["route-1"]);
-        alt_route.push(alt_data["route-2"]);
-      }
-
-      else if (Object.keys(alt_data).length == 3) {
-        alt_route.push(alt_data["route-1"]);
-        alt_route.push(alt_data["route-2"]);
-        alt_route.push(alt_data["route-3"]);
-      }
-
-      else if (Object.keys(alt_data).length == 0) {
-        alt_route.push([]);
-      }
-
-      console.log(alt_route.length);
-      // Parse the response JSON
-
-
-      const text = await response.text();
-      console.log(text);
-      const data = JSON.parse(text);
-      // console.log(data);
-      let safe_route = data["safest_route"];
-      // console.log(safe_route);
-
-
-
-      // Create a polyline using the coordinates and add it to the map
-      var endLat = parsed_end[0];  // Example: San Francisco
-      var endLng = parsed_end[1];
-
-
-      // Initialize the user path polyline
-      var fixedRoute = safe_route;
-      // console.log(fixedRoute);
-
-
-      // Draw the fixed route on the map
-      var routePolyline = L.polyline(fixedRoute, { color: 'green', weight: 6, opacity: 0.8 }).addTo(map);
-      //var altroutePolyline = L.polyline(alt_route, { color: 'blue', weight: 4, opacity:0.7 }).addTo(map);
-      // alt_route.forEach((route)=>
-      // {
-      //   L.polyline(route, { color: 'blue', weight: 4, fillOpacity:0.7 }).addTo(map);
-      // });
-      if (alt_route.length == 1) {
-        var altp = L.polyline(alt_route[0], { color: 'blue', weight: 4, fillOpacity: 0.4 }).addTo(map);
-      }
-      else if (alt_route.length == 2) {
-
-        var altp = L.polyline(alt_route[0], { color: 'blue', weight: 4, fillOpacity: 0.4 }).addTo(map);
-        var altp1 = L.polyline(alt_route[1], { color: 'blue', weight: 4, fillOpacity: 0.4 }).addTo(map);
-
-      }
-      else if (alt_route.length == 3) {
-
-        var altp = L.polyline(alt_route[0], { color: '#6a7fdb', weight: 4, fillOpacity: 0.4 }).addTo(map);
-        var altp1 = L.polyline(alt_route[1], { color: '#c38d94', weight: 4, fillOpacity: 0.4 }).addTo(map);
-        var altp2 = L.polyline(alt_route[2], { color: '#7b4b94', weight: 4, fillOpacity: 0.4 }).addTo(map);
-
-      }
-
-
-      // Marker for the user
-
-
-      var userMarker = L.circleMarker([0, 0]).addTo(map);
-      // Polyline for the user's movement (blue)
-      var userPolyline = L.polyline([], { color: 'blue', weight: 4 }).addTo(map);
-
-
-      // Track user’s movement
-      function updateUserLocation(position) {
-        var lat = position.coords.latitude;
-        var lon = position.coords.longitude;
-        var userPos = [lat, lon];
-
-        // Update marker position
-        userMarker.setLatLng(userPos).setPopupContent(`You are here<br>Lat: ${lat.toFixed(5)}, Lon: ${lon.toFixed(5)}`);
-
-        // Update user polyline (append only if moving along the fixed route)
-        userPolyline.addLatLng(userPos);
-
-        // Move map to user's location
-
-      }
-
-
-
-      function handleLocationError(error) {
-        console.error("Error getting location: ", error);
-      }
-
-      // Start tracking user
-      if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(updateUserLocation, handleLocationError, {
-          enableHighAccuracy: true,
-          maximumAge: 0
-        });
-      } else {
-        // alert("Geolocation is not supported by this browser.");
-        Toast.error("Geolocation is not supported by this browser.");
-      }
-
-      // Add a marker at the start (first coordinate)
-      const startMarker = L.circleMarker(safe_route[0],
-        {
-          colorFill: 'red'
-        }
-      ).addTo(map)
-        .bindPopup('Start Point')
-        .openPopup();
-
-      const endMarker = L.marker(safe_route[safe_route.length - 1],
-        {
-          colorFill: 'blue'
-        }
-      ).addTo(map)
-        .bindPopup(endLocation)
-        .openPopup();
-
-      // Add a marker at the end (last coordinate)
-
-
-      map.fitBounds(routePolyline.getBounds());
-
-      // Add a marker at the end (last coordinate)
-
-
-      // Assuming the response is a list of tuples, set the response
-      if (data.route) {
-        setResponse(data.route); // Store the received route
-      } else {
-        setError("Error receiving route data");
-      }
-    } catch (err) {
-      setError(err.message); // Set error message if anything goes wrong
-      setParsedCoords(null); // Reset parsed coordinates if error occurs
-      setResponse(null); // Reset the response
-    }
-  };
-
-
-
-  const [recentAddresses] = useState([
+  // Popups
+  const [showSaved, setShowSaved] = useState(false);
+  const [showRecent, setShowRecent] = useState(false);
+  const [showPhone, setShowPhone] = useState(false);
+  const [showPolice, setShowPolice] = useState(false);
+
+  // Data
+  const [savedAddresses, setSavedAddresses] = useState(["", "", "", "", ""]);
+  const recentAddresses = [
     "123 Main St, Austin, TX",
     "456 Park Ave, Houston, TX",
-    "789 Oak Rd, Dallas, TX"
-  ]);
-
+    "789 Oak Rd, Dallas, TX",
+  ];
   const [phoneNumbers, setPhoneNumbers] = useState([
     "911",
     "512-555-0123",
     "713-555-0456",
     "214-555-0789",
-    "832-555-0321"
+    "832-555-0321",
   ]);
+
+  // Toast
+  const [toast, setToast] = useState(null);
+  const showToast = (message, type = "error") => setToast({ message, type });
+
+  // ── Init map ────────────────────────────────────────────────────────────────
+  const mapDivRef = useRef(null);
+
   useEffect(() => {
-    // Initialize Leaflet only on client side
-    const initMap = async () => {
-      const L = await import('leaflet');
-      setL(L);
+    // Prevent double-init in React StrictMode
+    if (mapRef.current) return;
 
-      // const mapInstance = L.map("map", {
-      //   zoomControl: false,
-      //   maxBounds: [[33.5, -119.0], [34.5, -117.5]], // Northeast corner
-      //   maxBoundsViscosity: 0.0
-      //   // Keeps user inside the bounds
-      // }).setView([34.0522, -118.2437], 12); // Center on LA
-      const mapInstance = L.map("map", {
+    const init = async () => {
+      const leafletMod = await import("leaflet");
+      const L = leafletMod.default ?? leafletMod;
+      leafletRef.current = L;
+
+      const container = mapDivRef.current;
+      if (!container) return;
+
+      const mapInstance = L.map(container, {
         zoomControl: false,
-        maxBounds: [[41.73, -87.85], [42.02, -87.45]], // ~20 km radius around downtown Chicago
-        maxBoundsViscosity: 0.0 // Keeps user inside the bounds
-      }).setView([41.8781, -87.6298], 12); // Center on Downtown Chicago
-
-
-
-
-
-      // Define tile layers for both themes
-      const lightTiles = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        attributionControl: false,
+        maxBounds: [
+          [41.73, -87.85],
+          [42.02, -87.45],
+        ],
+        maxBoundsViscosity: 0.5,
       });
 
-      // const darkTiles = L.tileLayer("https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png", {
-      //   attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors',
-      // });
-      const darkTiles = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-  {
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    subdomains: 'abcd',
-    maxZoom: 19
-  }
-);
+      mapInstance.setView([41.8781, -87.6298], 12);
 
+      // Fix "4 tiles only" bug: Leaflet must recalculate container
+      // size after the DOM is fully painted
+      setTimeout(() => {
+        mapInstance.invalidateSize();
+      }, 0);
 
+      const darkTiles = L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        {
+          subdomains: "abcd",
+          maxZoom: 19,
+        },
+      );
+      const lightTiles = L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        { attribution: "© OpenStreetMap contributors" },
+      );
 
-      // Add the appropriate layer based on current theme
-      if (darkMode) {
-        darkTiles.addTo(mapInstance);
-      } else {
-        lightTiles.addTo(mapInstance);
-      }
+      darkTiles.addTo(mapInstance);
+      mapInstance._darkTiles = darkTiles;
+      mapInstance._lightTiles = lightTiles;
 
-      // Store both layers in the map instance for later use
-      mapInstance.lightTiles = lightTiles;
-      mapInstance.darkTiles = darkTiles;
+      // L.control.zoom({ position: "bottomright" }).addTo(mapInstance);
 
-      L.control.zoom({
-        position: "topright",
-      }).addTo(mapInstance);
-
-      const zoomControl = document.querySelector(".leaflet-control-zoom");
-      zoomControl.style.position = "absolute";
-      zoomControl.style.top = "60px";
-      zoomControl.style.right = "1px";
-      zoomControl.style.zIndex = "10000";
-
-      setMap(mapInstance);
+      mapRef.current = mapInstance;
     };
 
-    initMap();
+    init();
 
-    // Cleanup
     return () => {
-      if (map) map.remove();
-    };
-  }, []); // Initial map setup
-
-
-
-  // Add a separate useEffect to handle theme changes
-  useEffect(() => {
-    if (map && map.lightTiles && map.darkTiles) {
-      if (darkMode) {
-        if (map.hasLayer(map.lightTiles)) {
-          map.removeLayer(map.lightTiles);
-        }
-        map.darkTiles.addTo(map);
-      } else {
-        if (map.hasLayer(map.darkTiles)) {
-          map.removeLayer(map.darkTiles);
-        }
-        map.lightTiles.addTo(map);
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
       }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Theme switch ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map._darkTiles) return;
+    if (dark) {
+      if (map.hasLayer(map._lightTiles)) map.removeLayer(map._lightTiles);
+      if (!map.hasLayer(map._darkTiles)) map._darkTiles.addTo(map);
+    } else {
+      if (map.hasLayer(map._darkTiles)) map.removeLayer(map._darkTiles);
+      if (!map.hasLayer(map._lightTiles)) map._lightTiles.addTo(map);
     }
-  }, [darkMode, map]);
+  }, [dark]);
 
-  const handleRoutePlan = async (e) => {
-    e.preventDefault();
-
+  // ── Hotspot toggle ──────────────────────────────────────────────────────────
+  const toggleHotspots = () => {
+    const map = mapRef.current;
+    const L = leafletRef.current;
     if (!map || !L) return;
 
-    // Remove existing route if any
-    if (routeLayer) {
-      map.removeLayer(routeLayer);
-    }
-
-    try {
-      const response = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${startLocation};${endLocation}?overview=full&geometries=geojson`
-      );
-      const data = await response.json();
-
-      if (data.routes && data.routes[0]) {
-        const route = L.geoJSON(data.routes[0].geometry, {
-          style: {
-            color: '#0066CC',
-            weight: 6,
-            opacity: 0.7
-          }
+    if (hotspotsVisible) {
+      if (hotspotRef.current) {
+        map.removeLayer(hotspotRef.current);
+        hotspotRef.current = null;
+      }
+      setHotspotsVisible(false);
+    } else {
+      const clusters = [
+        [41.7505, -87.6018],
+        [41.9163, -87.6559],
+        [41.7751, -87.6794],
+        [41.9072, -87.744],
+        [41.8, -87.62],
+        [41.83, -87.65],
+      ];
+      // const markers = clusters.map((c) =>
+      //   L.circleMarker(c, {
+      //     color: DANGER,
+      //     weight: 2,
+      //     radius: 16,
+      //     fillColor: DANGER,
+      //     fillOpacity: 0.18,
+      //     opacity: 0.7,
+      //   }).bindTooltip("⚠ Crime Hotspot", { direction: "top" }),
+      // );
+      const markers = clusters.map((c) => {
+        const marker = L.circleMarker(c, {
+          color: DANGER,
+          weight: 2,
+          radius: 5,
+          fillColor: DANGER,
+          fillOpacity: 0.4,
         }).addTo(map);
 
-        setRouteLayer(route);
-        map.fitBounds(route.getBounds(), { padding: [50, 50] });
-        setShowRouteDialog(false);
-      }
-    } catch (error) {
-      console.error('Error calculating route:', error);
-      // alert('Error calculating route. Please check your coordinates and try again.');
-      Toast.error('Error calculating route. Please check your coordinates and try again.');
+        let start = null;
+
+        function animate(timestamp) {
+          if (!start) start = timestamp;
+
+          const elapsed = timestamp - start;
+          const scale = (Math.sin(elapsed / 400) + 1) / 2; 
+
+          const radius = 8 + scale * 10; // 8 → 18
+          const opacity = 0.3 + scale * 0.5;
+
+          marker.setRadius(radius);
+          marker.setStyle({
+            fillOpacity: opacity,
+          });
+
+          requestAnimationFrame(animate);
+        }
+
+        requestAnimationFrame(animate);
+
+        return marker.bindTooltip("⚠ Crime Hotspot", { direction: "top" });
+      });
+      hotspotRef.current = L.layerGroup(markers).addTo(map);
+      setHotspotsVisible(true);
+    }
+  };
+
+  // ── Route submit ────────────────────────────────────────────────────────────
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const map = mapRef.current;
+    const L = leafletRef.current;
+    if (!map || !L) {
+      showToast("Map not ready yet. Please wait.");
+      return;
     }
 
+    // Clear old layers
+    routeLayersRef.current.forEach((l) => {
+      try {
+        map.removeLayer(l);
+      } catch (_) {}
+    });
+    routeLayersRef.current = [];
 
+    // Parse start
+    let startCoords;
+    const sp = startLocation.split(",").map((x) => parseFloat(x.trim()));
+    if (sp.length === 2 && !isNaN(sp[0]) && !isNaN(sp[1])) {
+      startCoords = sp;
+    } else {
+      try {
+        startCoords = await new Promise((res, rej) => {
+          if (!navigator.geolocation) {
+            rej(new Error("Geolocation not supported"));
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(
+            (p) => res([p.coords.latitude, p.coords.longitude]),
+            () =>
+              rej(
+                new Error(
+                  "Could not get your location. Enter coordinates manually.",
+                ),
+              ),
+            { enableHighAccuracy: true, timeout: 8000 },
+          );
+        });
+      } catch (err) {
+        showToast(err.message);
+        return;
+      }
+    }
+
+    // Parse end
+    const ep = endLocation.split(",").map((x) => parseFloat(x.trim()));
+    if (ep.length !== 2 || isNaN(ep[0]) || isNaN(ep[1])) {
+      showToast("Enter a valid destination as lat,lng (e.g. 41.9163,-87.6559)");
+      return;
+    }
+
+    setShowRouteDialog(false);
+    setRouteLoading(true);
+
+    try {
+      const [safeRes, altRes] = await Promise.all([
+        fetch("https://subham-28-safeyatra-fastapi.hf.space/safe_route", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ start: startCoords, end: ep }),
+        }),
+        fetch("https://subham-28-safeyatra-fastapi.hf.space/alt_route", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ start: startCoords, end: ep }),
+        }),
+      ]);
+
+      if (!safeRes.ok)
+        throw new Error(`Server error ${safeRes.status}. Please try again.`);
+
+      const safeData = await safeRes.json();
+      const altData = await altRes.json().catch(() => ({}));
+
+      const safeRoute = safeData["safest_route"];
+      if (!safeRoute || safeRoute.length === 0)
+        throw new Error("No route returned from server.");
+
+      // Draw alternates first (under safe route)
+      const altColors = ["#6a7fdb", "#c38d94", "#7b4b94"];
+      const altRoutes = [
+        altData["alternate_routes"],
+        altData["route-1"],
+        altData["route-2"],
+        altData["route-3"],
+      ].filter((r) => r && r.length > 0);
+
+      altRoutes.forEach((route, i) => {
+        const p = L.polyline(route, {
+          color: altColors[i % 3],
+          weight: 4,
+          opacity: 0.65,
+        }).addTo(map);
+        routeLayersRef.current.push(p);
+      });
+
+      // Draw safe route on top
+      const safePoly = L.polyline(safeRoute, {
+        color: SUCCESS,
+        weight: 6,
+        opacity: 0.95,
+      }).addTo(map);
+      routeLayersRef.current.push(safePoly);
+
+      // Markers
+      const startM = L.circleMarker(safeRoute[0], {
+        radius: 9,
+        fillColor: SUCCESS,
+        color: "#fff",
+        weight: 2.5,
+        fillOpacity: 1,
+      })
+        .addTo(map)
+        .bindPopup("📍 <b>Start</b>")
+        .openPopup();
+      routeLayersRef.current.push(startM);
+
+      const endM = L.marker(safeRoute[safeRoute.length - 1])
+        .addTo(map)
+        .bindPopup("🏁 <b>Destination</b>");
+      routeLayersRef.current.push(endM);
+
+      map.fitBounds(safePoly.getBounds(), { padding: [60, 60] });
+
+      // User tracking
+      if (navigator.geolocation) {
+        const userM = L.circleMarker(safeRoute[0], {
+          radius: 8,
+          fillColor: "#3b82f6",
+          color: "#fff",
+          weight: 2.5,
+          fillOpacity: 1,
+        })
+          .addTo(map)
+          .bindTooltip("📍 You", { permanent: false });
+        routeLayersRef.current.push(userM);
+
+        navigator.geolocation.watchPosition(
+          (p) => userM.setLatLng([p.coords.latitude, p.coords.longitude]),
+          () => {},
+          { enableHighAccuracy: true, maximumAge: 0 },
+        );
+      }
+
+      setRouteVisible(true);
+      showToast("Safest route found! 🛡", "success");
+    } catch (err) {
+      showToast(
+        err.message ||
+          "Failed to get route. Check your coordinates and try again.",
+      );
+    } finally {
+      setRouteLoading(false);
+    }
   };
 
-  const handleSaveAddress = (index, address) => {
-    const newAddresses = [...savedAddresses];
-    newAddresses[index] = address;
-    setSavedAddresses(newAddresses);
-  };
+  // ── Derived ─────────────────────────────────────────────────────────────────
+  const sidebarW = sidebarOpen ? 220 : 64;
+  const t = th(dark);
 
-  const handleUpdatePhone = (index, number) => {
-    const newNumbers = [...phoneNumbers];
-    newNumbers[index] = number;
-    setPhoneNumbers(newNumbers);
-  };
-
-  // Popup Components
-  const SavedPopup = ({ darkMode }) => (
-    <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
-  ${darkMode ? "bg-gray-800 text-gray-200 border-gray-600" : "bg-gray-100 text-gray-900 border-gray-300"} 
-  p-6 rounded-lg shadow-lg z-50 w-96 border`}>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Saved Locations</h2>
-        <button onClick={() => setShowSavedPopup(false)} className={`${darkMode ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"}`}>✖</button>
-      </div>
-      <div className="space-y-3">
-        {savedAddresses.map((address, index) => (
-          <div key={index} className="flex gap-2">
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => handleSaveAddress(index, e.target.value)}
-              placeholder={`Saved Location ${index + 1}`}
-              className={`w-full p-2 border rounded ${darkMode ? "bg-gray-800 text-gray-200 border-gray-600" : "bg-gray-100 text-gray-900 border-gray-300"}`}
-            />
-          </div>
-        ))}
-      </div>
-    </div>
-
-  );
-  const RecentPopup = ({ darkMode }) => (
-    <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
-  ${darkMode ? "bg-gray-800 text-gray-200 border-gray-600" : "bg-gray-100 text-gray-900 border-gray-300"} 
-  p-6 rounded-lg shadow-lg z-50 w-96 border`}>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Recent Locations</h2>
-        <button onClick={() => setShowRecentPopup(false)} className={`${darkMode ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"}`}>✖</button>
-      </div>
-      <div className="space-y-2">
-        {recentAddresses.map((address, index) => (
-          <div key={index} className={`p-2 border rounded ${darkMode ? "bg-gray-700 border-gray-600" : "bg-white border-gray-300"}`}>
-            {address}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const PhonePopup = ({ darkMode }) => (
-    <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
-  ${darkMode ? "bg-gray-800 text-gray-200 border-gray-600" : "bg-gray-100 text-gray-900 border-gray-300"} 
-  p-6 rounded-lg shadow-lg z-50 w-96 border`}>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Emergency Contacts</h2>
-        <button onClick={() => setShowPhonePopup(false)} className={`${darkMode ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"}`}>✖</button>
-      </div>
-      <div className="space-y-3">
-        {phoneNumbers.map((number, index) => (
-          <div key={index} className="flex gap-2">
-            <input
-              type="text"
-              value={number}
-              onChange={(e) => handleUpdatePhone(index, e.target.value)}
-              className={`w-full p-2 border rounded ${darkMode ? "bg-gray-700 text-gray-200 border-gray-600" : "bg-white text-gray-900 border-gray-300"}`}
-            />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  // const PoliceStationsPopup = ({ darkMode }) => (
-  // <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
-  //   ${darkMode ? "bg-gray-800 text-gray-200 border-gray-600" : "bg-gray-100 text-gray-900 border-gray-300"} 
-  //   p-6 rounded-lg shadow-lg z-50 w-96 border`}>
-  //   <div className="flex justify-between items-center mb-4">
-  //     <h2 className="text-lg font-semibold">Nearby Police Stations</h2>
-  //     <button onClick={() => setShowPolicePopup(false)} className={`${darkMode ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"}`}>✖</button>
-  //   </div>
-  //   <div className={`text-center p-4 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-  //     <p>Fetching nearby police stations...</p>
-  //     <p className={`text-sm mt-2 ${darkMode ? "text-gray-400" : "text-gray-500"}`}>This feature would integrate with a real police station API</p>
-  //   </div>
-  // </div>
-  // );
-
-  // Update the Route Planning Dialog with dark mode
-  {
-    showRouteDialog && (
-      <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
-  ${darkMode ? "bg-gray-800 text-gray-200 border-gray-600" : "bg-white text-gray-900 border-gray-300"} 
-  p-6 rounded-lg shadow-lg z-50 w-96`}>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Plan Your Route</h2>
-          <button onClick={() => setShowRouteDialog(false)}
-            className={`${darkMode ? "text-gray-400 hover:text-gray-300" : "text-gray-500 hover:text-gray-700"}`}>✖</button>
-        </div>
-      </div>
-    )
-  }
-  const handleClosePolicePopup = () => {
-    setShowPolicePopup(false);
-  };
-
-  // Update the popup references in the return statement to pass the darkMode prop
-  { showSavedPopup && <SavedPopup darkMode={darkMode} /> }
-  { showRecentPopup && <RecentPopup darkMode={darkMode} /> }
-  { showPhonePopup && <PhonePopup darkMode={darkMode} /> }
-  // { showPolicePopup && (
-  //  <PoliceStationsPopup 
-  //   darkMode={darkMode} 
-  //   onClose={handleClosePolicePopup} 
-  //   />
-  //  )}
-
-
-
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="relative w-full h-screen">
-      {/* Search Bar */}
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100vh",
+        overflow: "hidden",
+        fontFamily: "system-ui,-apple-system,sans-serif",
+      }}
+    >
+      {/* Map div — never unmounts */}
       <div
-        className={`absolute top-0 left-0 w-full p-2 flex items-center shadow-md z-50 transition-all duration-300 ${sidebarOpen ? "w-52" : "w-16"
-          } ${darkMode ? "bg-gray-900 text-white" : "bg-white text-black"}`}
+        ref={mapDivRef}
+        style={{ position: "absolute", inset: 0, zIndex: 1 }}
+      />
+
+      {/* ── Sidebar ── */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          height: "100%",
+          zIndex: 40,
+          width: sidebarW,
+          overflow: "hidden",
+          background: t.bg,
+          backdropFilter: "blur(12px)",
+          borderRight: `1px solid ${t.border}`,
+          display: "flex",
+          flexDirection: "column",
+          transition: "width 0.28s cubic-bezier(.4,0,.2,1)",
+        }}
       >
-        {/* Sidebar Toggle Button */}
-        <button
-          className={`p-2 text-xl self-end ${darkMode ? "text-white hover:bg-gray-700" : "text-black hover:bg-gray-200"
-            }`}
-          onClick={() => setSidebarOpen(!sidebarOpen)}
+        {/* Logo */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "18px 14px 8px",
+            overflow: "hidden",
+          }}
         >
-          {sidebarOpen ? "✖" : "☰"}
-        </button>
+          <div
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              background: ACCENT,
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 17,
+              boxShadow: `0 0 14px ${ACCENT_GLOW}`,
+            }}
+          >
+            🛡
+          </div>
+          <span
+            style={{
+              fontWeight: 700,
+              fontSize: 15,
+              color: t.text,
+              whiteSpace: "nowrap",
+              opacity: sidebarOpen ? 1 : 0,
+              transition: "opacity 0.2s",
+            }}
+          >
+            SafeYatra
+          </span>
+        </div>
 
-        {/* Search Input */}
-        <input
-          type="text"
-          placeholder="Enter your destination"
-          className={`ml-7 p-2 w-[600px] border rounded-lg cursor-pointer z-30 transition-all ${darkMode
-            ? "bg-gray-800 text-white border-gray-600 opacity-80"
-            : "bg-white text-black border-gray-300 opacity-75"
-            }`}
-          onClick={() => setShowRouteDialog(true)}
-          readOnly
+        {/* Toggle */}
+        <SidebarToggle
+          dark={dark}
+          open={sidebarOpen}
+          onClick={() => setSidebarOpen((v) => !v)}
+          t={t}
         />
-      </div>
 
-      {/* Route Planning Dialog */}
-      <div>
-        {/* A button to open the form */}
-        <button
-          onClick={() => setShowRouteDialog(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        {/* Divider */}
+        <div
+          style={{ height: 1, margin: "4px 12px 8px", background: t.border }}
+        />
+
+        {/* Nav items */}
+        <nav
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflowY: "auto",
+            overflowX: "hidden",
+          }}
         >
-          Plan Your Route
-        </button>
+          <HomeLink dark={dark} sidebarOpen={sidebarOpen} t={t} />
+          {[
+            { icon: "⭐", label: "Saved", onClick: () => setShowSaved(true) },
+            { icon: "🕘", label: "Recent", onClick: () => setShowRecent(true) },
+            {
+              icon: "📞",
+              label: "Emergency",
+              onClick: () => setShowPhone(true),
+            },
+            {
+              icon: "🚔",
+              label: "Police Stations",
+              onClick: () => setShowPolice(true),
+            },
+            {
+              icon: "🎯",
+              label: hotspotsVisible ? "Hide Hotspots" : "Crime Hotspots",
+              onClick: toggleHotspots,
+              active: hotspotsVisible,
+            },
+          ].map((item) => (
+            <NavBtn
+              key={item.label}
+              dark={dark}
+              sidebarOpen={sidebarOpen}
+              {...item}
+            />
+          ))}
+        </nav>
 
-        {/* Conditionally render RouteForm when showRouteDialog is true */}
-        {showRouteDialog && (
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg z-50 w-96">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Plan Your Route</h2>
-              <button onClick={() => setShowRouteDialog(false)} className="text-gray-500 hover:text-gray-700">✖</button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Starting Location */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Enter your starting location
-                </label>
-                <input
-                  type="text"
-                  value={startLocation}
-                  onChange={(e) => setStartLocation(e.target.value)}
-                  placeholder="e.g., New York"
-                  className="w-full p-2 border rounded"
-                />
-              </div>
-
-              {/* Ending Location */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Destination location
-                </label>
-                <input
-                  type="text"
-                  value={endLocation}
-                  onChange={(e) => setEndLocation(e.target.value)}
-                  placeholder="e.g., Los Angeles"
-                  className="w-full p-2 border rounded"
-                />
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex justify-end space-x-2 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowRouteDialog(false)}
-                  className="px-4 py-2 border rounded hover:bg-gray-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  Get Directions
-                </button>
-              </div>
-            </form>
+        {/* Footer */}
+        {sidebarOpen && (
+          <div
+            style={{
+              padding: "10px 14px 14px",
+              fontSize: 10,
+              color: t.muted,
+              opacity: 0.5,
+            }}
+          >
+            SafeYatra · Chicago
           </div>
         )}
       </div>
 
-      {/* Dark Mode Toggle
-      <div className="absolute top-2 right-5 z-40">
-        <button
-          onClick={() => setDarkMode(!darkMode)}
-          className={`w-14 h-7 flex items-center px-1 rounded-full transition-all ${darkMode ? "bg-gray-700" : "bg-gray-300"}`}
-        >
-          <div
-            className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${darkMode ? "translate-x-7" : "translate-x-0"}`}
-          ></div>
-        </button>
-      </div> */}
+      {/* ── Top search bar ── */}
+      <div
+        style={{
+          position: "absolute",
+          top: 12,
+          left: sidebarW + 12,
+          right: 76,
+          zIndex: 30,
+          transition: "left 0.28s cubic-bezier(.4,0,.2,1)",
+        }}
+      >
+        <SearchBar
+          dark={dark}
+          t={t}
+          routeVisible={routeVisible}
+          onClick={() => setShowRouteDialog(true)}
+        />
+      </div>
 
-      <div className="absolute top-2 right-5 z-50">
-        <button
-          onClick={() => setDarkMode(!darkMode)}
-          className={`w-14 h-7 flex items-center px-1 rounded-full transition-all ${darkMode ? "bg-gray-700" : "bg-gray-300"
-            }`}
+      {/* ── Theme toggle ── */}
+      <div style={{ position: "absolute", top: 12, right: 14, zIndex: 40 }}>
+        <ThemeToggle dark={dark} onClick={() => setDark((v) => !v)} />
+      </div>
+
+      {/* ── Bottom-right FABs ── */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 28,
+          right: 14,
+          zIndex: 20,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <HelpButton />
+      </div>
+
+      {/* ── Route legend ── */}
+      <RouteLegend dark={dark} visible={routeVisible} sidebarW={sidebarW} />
+
+      {/* ── Hotspot badge ── */}
+      {hotspotsVisible && (
+        <div
+          style={{
+            position: "absolute",
+            top: 60,
+            left: sidebarW + 12,
+            zIndex: 30,
+            background: "rgba(239,68,68,0.1)",
+            color: DANGER,
+            padding: "4px 10px",
+            borderRadius: 99,
+            fontSize: 11,
+            fontWeight: 700,
+            border: "1px solid rgba(239,68,68,0.2)",
+            transition: "left 0.28s",
+          }}
         >
-          <div
-            className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${darkMode ? "translate-x-0" : "translate-x-7"
-              }`}
-          ></div>
-        </button>
-      </div>
+          🎯 Hotspots visible
+        </div>
+      )}
 
-      {/* Sidebar */}
-      <div className={`absolute top-0 left-0 h-full p-2 flex items-center shadow-md z-40 flex-col py-4 transition-all duration-300 
-${sidebarOpen ? "w-52" : "w-18"} 
-${darkMode ? "bg-gray-900 text-gray-200" : "bg-white text-gray-900"}`}>
+      {/* ── Loading overlay ── */}
+      {routeLoading && <LoadingOverlay dark={dark} />}
 
-        {/* Sidebar Toggle Button */}
-        <button className="p-2 text-xl self-start" onClick={() => setSidebarOpen(!sidebarOpen)}>
-          {sidebarOpen ? "✖" : "☰"}
-        </button>
-
-        {/* Navigation Menu */}
-        <nav className="flex flex-col w-full p-2">
-          <Link
-            to="/LandingPage2"
-            className={`p-3 flex items-center w-full transition-colors duration-200 z-20 
-        ${darkMode ? "hover:bg-gray-700 text-gray-300" : "hover:bg-gray-200 text-gray-900"}`}
-          >
-            🏠 {sidebarOpen && <span className="ml-2">Home</span>}
-          </Link>
-          <button className={`p-3 flex items-center w-full transition-colors duration-200 
-    ${darkMode ? "hover:bg-gray-700 text-gray-300" : "hover:bg-gray-200 text-gray-900"}`}
-            onClick={() => setShowSavedPopup(true)}>
-            ⭐ {sidebarOpen && <span className="ml-2">Saved</span>}
-          </button>
-          <button className={`p-3 flex items-center w-full transition-colors duration-200 
-    ${darkMode ? "hover:bg-gray-700 text-gray-300" : "hover:bg-gray-200 text-gray-900"}`}
-            onClick={() => setShowRecentPopup(true)}>
-            🕘 {sidebarOpen && <span className="ml-2">Recent</span>}
-          </button>
-          <button className={`p-3 flex items-center w-full transition-colors duration-200 
-  ${darkMode ? "hover:bg-gray-700 text-gray-300" : "hover:bg-gray-200 text-gray-900"}`}
-            onClick={() => setShowPhonePopup(true)}>
-            📞 {sidebarOpen && <span className="ml-2">Phone</span>}
-          </button>
-          <button
-            className={`p-3 flex items-center w-full transition-colors duration-200 
-            ${darkMode ? "hover:bg-gray-700 text-gray-300" : "hover:bg-gray-200 text-gray-900"}`}
-            onClick={() => setShowPolicePopup(true)}>
-            🚔 {sidebarOpen && <span className="ml-2">Police Stations</span>}
-          </button>
-
-          {/* --- START OF CHANGES FOR CRIME HOTSPOTS --- */}
-          <button
-            className={`p-3 flex items-center w-full transition-colors duration-200 
-            ${darkMode ? "hover:bg-gray-700 text-gray-300" : "hover:bg-gray-200 text-gray-900"}`}
-            onClick={handleHotspotToggle}> {/* Changed to call the new toggle function */}
-            🎯 {sidebarOpen && <span className="ml-2">Crime Hotspots</span>}
-          </button>
-          {/* --- END OF CHANGES FOR CRIME HOTSPOTS --- */}
-
-        </nav>
-      </div>
-
-      {/* Popups */}
-      {showSavedPopup && <SavedPopup />}
-      {showRecentPopup && <RecentPopup />}
-      {showPhonePopup && <PhonePopup />}
-      {showPolicePopup && (
-        <PoliceStationsPopup
-          darkMode={darkMode}
-          onClose={handleClosePolicePopup}
+      {/* ── Toast ── */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onDismiss={() => setToast(null)}
         />
       )}
 
-      {/* Map Container */}
-      <div id="map" className="w-full h-full z-10" />
-
-      {/* Bottom Right Buttons */}
-      {/* Bottom Right Buttons */}
-      <div className="absolute bottom-7 right-5 flex flex-col gap-4 z-20">
-        {/* HELP Button */}
-        {/* <button
-  //onClick={() => setShowRouteDialog(false)}
-    className={`relative w-0 h-0 border-l-[40px] border-r-[40px] border-b-[70px] border-l-transparent border-r-transparent 
-    ${!darkMode ? "border-b-red-600 text-white" : "border-b-[#FFFF00] text-black"} animate-pulse z-20`}
-  >
-    <span className="absolute top-10 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl">
-      <b>!</b>
-    </span>
-  </button> */}
-        <HelpButton />
-
-
-        <div className="flex flex-col px-8 py-2 gap-2 z-20">
-          {/* Map Button */}
-          <button
-            className={`p-2 shadow-md rounded-lg border-2 ${darkMode ? "bg-gray-800 border-gray-600 text-gray-300" : "bg-white border-gray-300 text-gray-800"
-              }`}
-          >
-            🗺
-          </button>
-
-          {/* Satellite Button */}
-          <button
-            className={`p-2 shadow-md rounded-lg border-2 ${darkMode ? "bg-gray-800 border-gray-600 text-gray-300" : "bg-white border-gray-300 text-gray-800"
-              }`}
-          >
-            🛰
-          </button>
-        </div>
-      </div>
-
+      {/* ── Modals ── */}
+      {showRouteDialog && (
+        <RouteDialog
+          dark={dark}
+          startLocation={startLocation}
+          endLocation={endLocation}
+          onChangeStart={setStartLocation}
+          onChangeEnd={setEndLocation}
+          onSubmit={handleSubmit}
+          onClose={() => setShowRouteDialog(false)}
+          loading={routeLoading}
+        />
+      )}
+      {showSaved && (
+        <SavedPopup
+          dark={dark}
+          savedAddresses={savedAddresses}
+          onSave={(i, v) => {
+            const a = [...savedAddresses];
+            a[i] = v;
+            setSavedAddresses(a);
+          }}
+          onClose={() => setShowSaved(false)}
+        />
+      )}
+      {showRecent && (
+        <RecentPopup
+          dark={dark}
+          recentAddresses={recentAddresses}
+          onClose={() => setShowRecent(false)}
+        />
+      )}
+      {showPhone && (
+        <PhonePopup
+          dark={dark}
+          phoneNumbers={phoneNumbers}
+          onUpdate={(i, v) => {
+            const n = [...phoneNumbers];
+            n[i] = v;
+            setPhoneNumbers(n);
+          }}
+          onClose={() => setShowPhone(false)}
+        />
+      )}
+      {showPolice && (
+        <PoliceStationsPopup
+          dark={dark}
+          darkMode={dark}
+          onClose={() => setShowPolice(false)}
+        />
+      )}
     </div>
   );
-};
+}
 
-export default Map;
+// ─── Small extracted render helpers (avoid inline complexity) ─────────────────
+
+function SidebarToggle({ dark, open, onClick, t }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      title={open ? "Collapse" : "Expand"}
+      style={{
+        margin: "4px 10px 4px",
+        padding: "8px 10px",
+        borderRadius: 8,
+        border: "none",
+        background: hov ? t.elevated : "transparent",
+        cursor: "pointer",
+        color: t.muted,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: open ? "flex-end" : "center",
+        transition: "background 0.15s",
+      }}
+    >
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 18 18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      >
+        {open ? (
+          <>
+            <line x1="3" y1="9" x2="15" y2="9" />
+            <polyline points="10,4 15,9 10,14" />
+          </>
+        ) : (
+          <>
+            <line x1="3" y1="5" x2="15" y2="5" />
+            <line x1="3" y1="9" x2="15" y2="9" />
+            <line x1="3" y1="13" x2="15" y2="13" />
+          </>
+        )}
+      </svg>
+    </button>
+  );
+}
+
+function HomeLink({ sidebarOpen, t }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <Link
+      to="/LandingPage2"
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "10px 14px",
+        borderRadius: 10,
+        margin: "2px 8px",
+        background: hov ? t.elevated : "transparent",
+        color: t.text,
+        fontSize: 14,
+        fontWeight: 500,
+        textDecoration: "none",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        transition: "background 0.15s",
+        width: "calc(100% - 16px)",
+      }}
+    >
+      <span
+        style={{ fontSize: 18, flexShrink: 0, width: 22, textAlign: "center" }}
+      >
+        🏠
+      </span>
+      <span
+        style={{
+          maxWidth: sidebarOpen ? 140 : 0,
+          opacity: sidebarOpen ? 1 : 0,
+          overflow: "hidden",
+          transition: "max-width 0.25s, opacity 0.2s",
+        }}
+      >
+        Home
+      </span>
+    </Link>
+  );
+}
+
+function SearchBar({ dark, t, routeVisible, onClick }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "11px 16px",
+        borderRadius: 12,
+        border: `1px solid ${hov ? ACCENT : t.border}`,
+        background: dark ? "rgba(22,27,34,0.92)" : "rgba(255,255,255,0.92)",
+        color: t.muted,
+        cursor: "pointer",
+        backdropFilter: "blur(12px)",
+        boxShadow: hov
+          ? `0 0 0 3px ${ACCENT_GLOW}`
+          : "0 2px 12px rgba(0,0,0,0.15)",
+        fontSize: 14,
+        fontFamily: "inherit",
+        textAlign: "left",
+        transition: "border-color 0.15s, box-shadow 0.15s",
+      }}
+    >
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 15 15"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ opacity: 0.45, flexShrink: 0 }}
+      >
+        <circle cx="6" cy="6" r="4.5" />
+        <line x1="9.5" y1="9.5" x2="13" y2="13" />
+      </svg>
+      <span style={{ flex: 1 }}>Enter destination to find safest route…</span>
+      <span
+        style={{
+          background: routeVisible
+            ? "rgba(34,197,94,0.12)"
+            : "rgba(37,99,235,0.1)",
+          color: routeVisible ? SUCCESS : ACCENT,
+          fontSize: 11,
+          fontWeight: 700,
+          padding: "3px 8px",
+          borderRadius: 99,
+          flexShrink: 0,
+        }}
+      >
+        {routeVisible ? "Route active" : "Plan route"}
+      </span>
+    </button>
+  );
+}
+
+function ThemeToggle({ dark, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      title={dark ? "Switch to light mode" : "Switch to dark mode"}
+      style={{
+        width: 50,
+        height: 28,
+        borderRadius: 14,
+        border: "none",
+        cursor: "pointer",
+        background: dark ? "#1c2128" : "#cbd5e1",
+        padding: "0 4px",
+        display: "flex",
+        alignItems: "center",
+        transition: "background 0.3s",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+      }}
+    >
+      <div
+        style={{
+          width: 20,
+          height: 20,
+          borderRadius: "50%",
+          background: dark ? "#94a3b8" : ACCENT,
+          boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+          transform: dark ? "translateX(0)" : "translateX(22px)",
+          transition: "transform 0.3s cubic-bezier(.4,0,.2,1), background 0.3s",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 10,
+        }}
+      >
+        {dark ? "🌙" : "☀"}
+      </div>
+    </button>
+  );
+}
+
+function FabBtn({ icon, title, dark, t }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      title={title}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        border: `1px solid ${t.border}`,
+        background: dark ? "rgba(22,27,34,0.92)" : "rgba(255,255,255,0.92)",
+        backdropFilter: "blur(10px)",
+        fontSize: 20,
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: hov
+          ? "0 6px 20px rgba(0,0,0,0.25)"
+          : "0 2px 10px rgba(0,0,0,0.15)",
+        transform: hov ? "translateY(-2px)" : "translateY(0)",
+        transition: "transform 0.15s, box-shadow 0.15s",
+      }}
+    >
+      {icon}
+    </button>
+  );
+}
