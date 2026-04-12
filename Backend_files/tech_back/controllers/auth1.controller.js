@@ -1,8 +1,8 @@
 import crypto from "crypto";
-import nodemailer from "nodemailer";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
+import { Resend } from "resend";
 
 // 📝 Register Controller
 export const registerUser = async (req, res) => {
@@ -70,7 +70,7 @@ export const loginUser = async (req, res) => {
     const accessToken = jwt.sign(
       { userId: user._id, email: user.email },
       process.env.JWT_SECRET_KEY,
-      { expiresIn: "7d" }
+      { expiresIn: "7d" },
     );
 
     return res
@@ -131,7 +131,7 @@ export const updateUser = async (req, res) => {
         _id: { $ne: req.userId },
         $or: [
           ...(username ? [{ username }] : []),
-          ...(email    ? [{ email }]    : []),
+          ...(email ? [{ email }] : []),
         ],
       });
       if (conflict) {
@@ -145,11 +145,11 @@ export const updateUser = async (req, res) => {
     const updated = await User.findByIdAndUpdate(
       req.userId,
       {
-        ...(username            && { username }),
-        ...(email               && { email }),
+        ...(username && { username }),
+        ...(email && { email }),
         ...(phone !== undefined && { phone }),
       },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).select("-password");
 
     if (!updated) {
@@ -189,15 +189,15 @@ export const updateEmergencyContacts = async (req, res) => {
     const cleaned = contacts
       .filter((c) => c.name && c.name.trim())
       .map((c) => ({
-        name:     c.name.trim(),
+        name: c.name.trim(),
         relation: (c.relation || "").trim(),
-        phone:    (c.phone    || "").trim(),
+        phone: (c.phone || "").trim(),
       }));
 
     const updated = await User.findByIdAndUpdate(
       req.userId,
       { emergencyContacts: cleaned },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).select("-password");
 
     if (!updated) {
@@ -243,28 +243,31 @@ export const forgotPassword = async (req, res) => {
     const resetURL = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
     const transporter = nodemailer.createTransport({
-      host: "sandbox.smtp.mailtrap.io",
-      port: 2525,
+      host: "smtp-relay.brevo.com",
+      port: 587,
+      secure: false,
       auth: {
-        user: process.env.MAILTRAP_USER,
-        pass: process.env.MAILTRAP_PASS,
+        user: process.env.BREVO_USER,
+        pass: process.env.BREVO_PASS,
       },
     });
 
-    await transporter.sendMail({
-      from: '"SafeYatra" <no-reply@safeyatra.com>',
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    await resend.emails.send({
+      from: "SafeYatra <onboarding@resend.dev>",
       to: user.email,
       subject: "Reset your SafeYatra password",
       html: `
-        <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#f8fafc;border-radius:12px">
-          <h2 style="color:#0f172a">Reset your password</h2>
-          <p style="color:#64748b">Click the button below to reset your password. This link expires in <strong>1 hour</strong>.</p>
-          <a href="${resetURL}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#3b82f6;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
-            Reset Password
-          </a>
-          <p style="color:#94a3b8;font-size:12px;margin-top:24px">If you didn't request this, ignore this email.</p>
-        </div>
-      `,
+    <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#f8fafc;border-radius:12px">
+      <h2 style="color:#0f172a">Reset your password</h2>
+      <p style="color:#64748b">Click the button below to reset your password. This link expires in <strong>1 hour</strong>.</p>
+      <a href="${resetURL}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#3b82f6;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">
+        Reset Password
+      </a>
+      <p style="color:#94a3b8;font-size:12px;margin-top:24px">If you didn't request this, ignore this email.</p>
+    </div>
+  `,
     });
 
     return res.status(200).json({
