@@ -1,26 +1,28 @@
 import express from "express";
 import {
-	login,
-	logout,
-	signup,
-	verifyEmail,
-	forgotPassword,
-	resetPassword,
-	checkAuth,
+  registerUser,
+  loginUser,
+  logoutUser,
+  getUser,
+  updateUser,
+  updateEmergencyContacts,
+  forgotPassword,
+  resetPassword,
 } from "../controllers/auth.controller.js";
-import { verifyToken } from "../middleware/verifyToken.js";
+import authMiddleware from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-router.get("/check-auth", verifyToken, checkAuth);
-
-router.post("/signup", signup);
-router.post("/login", login);
-router.post("/logout", logout);
-
-router.post("/verify-email", verifyEmail);
+// Public routes
+router.post("/register", registerUser);
+router.post("/login", loginUser);
+router.post("/logout", logoutUser);
 router.post("/forgot-password", forgotPassword);
-
 router.post("/reset-password/:token", resetPassword);
+
+// Protected routes
+router.get("/getuser", authMiddleware, getUser);
+router.put("/updateuser", authMiddleware, updateUser);
+router.put("/emergency-contacts", authMiddleware, updateEmergencyContacts);
 
 export default router;

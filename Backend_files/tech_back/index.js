@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser";
 import path from "path";
 import twilio from "twilio";
 import  connectDB  from "./db/connectDB.js";
-import authRoutes from "./routes/auth1.route.js";
+import authRoutes from "./routes/auth.route.js";
 import reportRoutes from './routes/reportRoutes.js';
 
 dotenv.config();
