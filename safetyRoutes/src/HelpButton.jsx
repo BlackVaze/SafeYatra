@@ -1,9 +1,27 @@
 import React, { useState, useRef, useEffect } from "react";
 import Toast from "./toast";
+import API from "./api/axios";
 
 const HelpButton = () => {
   const [showDialog, setShowDialog] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [emergencyContacts, setEmergencyContacts] = useState([]);
+
+  // Fetch emergency contacts on mount and pre-fill first contact's phone
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await API.get("/api/auth/getuser");
+        if (res.data.success && res.data.user.emergencyContacts?.length) {
+          setEmergencyContacts(res.data.user.emergencyContacts);
+          const firstPhone = res.data.user.emergencyContacts[0]?.phone;
+          if (firstPhone) setPhoneNumber(firstPhone);
+        }
+      } catch (e) {
+        // not logged in — leave field empty
+      }
+    })();
+  }, []);
   const [isSending, setIsSending] = useState(false);
   const [panelBottom, setPanelBottom] = useState(0);
   const fabRef = useRef(null);
@@ -133,6 +151,11 @@ const HelpButton = () => {
         <div className="mb-3">
           <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">
             Recipient phone number
+            {emergencyContacts[0]?.name && (
+              <span className="ml-1.5 text-zinc-400 dark:text-zinc-500 font-normal">
+                (pre-filled: {emergencyContacts[0].name})
+              </span>
+            )}
           </label>
           <input
             type="tel"
