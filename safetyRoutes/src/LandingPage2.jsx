@@ -4,6 +4,7 @@ import darkMapBg from "./assets/darkmapbg.jpg";
 import lightMapBg from "./lightmapbg.png";
 import profileIcon from "./profileicon.png";
 import { motion, AnimatePresence } from "framer-motion";
+import API from "./api/axios";
 
 const translations = {
   en: {
@@ -182,6 +183,30 @@ const RouteAnimation = ({ light }) => {
 const ProfileMenu = ({ light, t, navigate }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const [user, setUser] = useState(null);
+
+  const handleLogout = async () => {
+    try {
+      await API.post("/api/auth/logout");
+      navigate("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      setOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await API.get("/api/auth/getuser");
+        if (res.data.success) setUser(res.data.user);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
+
   useEffect(() => {
     const h = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
@@ -244,12 +269,12 @@ const ProfileMenu = ({ light, t, navigate }) => {
                 <p
                   className={`text-sm font-semibold truncate ${light ? "text-gray-900" : "text-white"}`}
                 >
-                  My Account
+                  {user?.username || "My Account"}
                 </p>
                 <p
                   className={`text-xs truncate ${light ? "text-gray-400" : "text-gray-500"}`}
                 >
-                  View profile
+                  {user?.email || "View profile"}
                 </p>
               </div>
             </div>
@@ -283,40 +308,11 @@ const ProfileMenu = ({ light, t, navigate }) => {
               Profile
             </button>
 
-            <button
-              className={itemCls}
-              onClick={() => {
-                navigate("/settings");
-                setOpen(false);
-              }}
-            >
-              <span
-                className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${light ? "bg-gray-100" : "bg-white/8"}`}
-              >
-                <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
-                  <circle
-                    cx="7.5"
-                    cy="7.5"
-                    r="2"
-                    stroke="currentColor"
-                    strokeWidth="1.3"
-                  />
-                  <path
-                    d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M2.9 2.9l1.1 1.1M11 11l1.1 1.1M2.9 12.1L4 11M11 4l1.1-1.1"
-                    stroke="currentColor"
-                    strokeWidth="1.3"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>
-              Settings
-            </button>
-
             <div className={`my-1.5 border-t ${divider}`} />
 
             <button
               className={`${itemBase} text-sm font-medium transition-all duration-150 ${light ? "text-red-500 hover:bg-red-50" : "text-red-400 hover:bg-red-900/20"}`}
-              onClick={() => setOpen(false)}
+              onClick={handleLogout}
             >
               <span
                 className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${light ? "bg-red-50" : "bg-red-900/20"}`}
@@ -546,9 +542,9 @@ const LandingPage2 = () => {
     show: { transition: { staggerChildren: 0.09, delayChildren: 0.2 } },
   };
   const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.5, ease } },
-  };
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 0.5, ease } },
+};
 
   return (
     <div
@@ -577,11 +573,8 @@ const LandingPage2 = () => {
       <RouteAnimation light={light} />
 
       {/* ── Navbar ── */}
-      <motion.nav
-        initial={{ opacity: 0, y: -16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.55, ease }}
-        className={`relative z-40 w-full flex-shrink-0 ${navBg} transition-all duration-300`}
+      <nav
+        className={`fixed top-0 left-0 right-0 z-40 w-full flex-shrink-0 ${navBg} transition-all duration-300`}
       >
         <div
           className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14
@@ -604,8 +597,15 @@ const LandingPage2 = () => {
                 />
               </svg>
             </div>
-            <span className={`text-lg font-bold tracking-tight ${logoColor}`}>
-              {t.title}
+            <span
+              style={{
+                fontWeight: 800,
+                fontSize: 18,
+                letterSpacing: "-.5px",
+                color: light ? "#0f172a" : "#e8f4f0",
+              }}
+            >
+              Safe<span style={{ color: "#10b981" }}>Yatra</span>
             </span>
           </motion.div>
 
@@ -665,7 +665,7 @@ const LandingPage2 = () => {
             </div>
           </div>
         </div>
-      </motion.nav>
+      </nav>
 
       {/* ── Hero ── */}
       <main className="relative z-20 flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-6 min-h-0">

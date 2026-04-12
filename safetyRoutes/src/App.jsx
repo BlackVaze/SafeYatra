@@ -14,23 +14,13 @@ import HowItWorks from "./HowitWorks";
 import AboutUs from "./AboutUs";
 import BotpressChat from "./components/botpressChat";
 import LocationForm from "./LocationForm"; // Import the new LocationForm component
+import ForgotPassword from "./ForgotPassword";
+import ResetPassword from "./ResetPassword";
 
 function App() {
   return (
     <Router>
-      {/* Global Botpress Chat */}
       <BotpressChat />
-
-      {/* Global Toaster */}
-      {/* <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            fontSize: "16px",
-          },
-        }}
-      /> */}
       <Toaster
         position="top-right"
         toastOptions={{
@@ -54,12 +44,8 @@ function App() {
               color: "#fff",
             },
           },
-          // info or neutral can use default gray if needed
         }}
       />
-
-
-      {/* Routes */}
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/LandingPage2" element={<LandingPage2 />} />
@@ -70,8 +56,10 @@ function App() {
         <Route path="/report" element={<Seereportt />} />
         <Route path="/aboutus" element={<AboutUs />} />
         <Route path="/accounts" element={<Accounts />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/how" element={<HowItWorks />} />
-        <Route path="/location" element={<LocationForm />} /> {/* New Route for Location Form */}
+        <Route path="/location" element={<LocationForm />} />{" "}
       </Routes>
     </Router>
   );

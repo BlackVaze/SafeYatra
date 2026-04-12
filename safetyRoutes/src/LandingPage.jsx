@@ -180,167 +180,6 @@ const RouteAnimation = ({ light }) => {
   );
 };
 
-/* ── Profile Dropdown ── */
-const ProfileMenu = ({ light, t, navigate }) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  useEffect(() => {
-    const h = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-
-  const panel = light
-    ? "bg-white/96 backdrop-blur-xl border border-gray-100 shadow-2xl shadow-black/12"
-    : "bg-[#0e1420]/96 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/60";
-
-  const itemBase =
-    "w-full text-left px-3 py-2.5 text-sm font-medium transition-all duration-150 flex items-center gap-3 rounded-xl";
-  const itemCls = light
-    ? `${itemBase} text-gray-700 hover:bg-gray-50`
-    : `${itemBase} text-gray-300 hover:bg-white/6`;
-  const divider = light ? "border-gray-100" : "border-white/8";
-
-  return (
-    <div ref={ref} className="relative">
-      <motion.button
-        whileHover={{ scale: 1.06 }}
-        whileTap={{ scale: 0.94 }}
-        onClick={() => setOpen(!open)}
-        className={`w-9 h-9 rounded-full overflow-hidden transition-all duration-200 ${
-          open
-            ? `ring-2 ${light ? "ring-gray-900 ring-offset-1" : "ring-white ring-offset-1 ring-offset-transparent"}`
-            : `ring-2 ${light ? "ring-gray-200 hover:ring-gray-400" : "ring-white/20 hover:ring-white/50"}`
-        }`}
-      >
-        <img
-          src={profileIcon}
-          alt="profile"
-          className="w-full h-full object-cover"
-        />
-      </motion.button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.94 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.94 }}
-            transition={{ duration: 0.18, ease }}
-            className={`absolute right-0 top-full mt-3 w-56 rounded-2xl p-2 ${panel}`}
-          >
-            {/* Account header */}
-            <div
-              className={`flex items-center gap-3 px-3 py-2.5 mb-1.5 rounded-xl ${light ? "bg-gray-50" : "bg-white/5"}`}
-            >
-              <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-white/20 flex-shrink-0">
-                <img
-                  src={profileIcon}
-                  alt="profile"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="min-w-0">
-                <p
-                  className={`text-sm font-semibold truncate ${light ? "text-gray-900" : "text-white"}`}
-                >
-                  My Account
-                </p>
-                <p
-                  className={`text-xs truncate ${light ? "text-gray-400" : "text-gray-500"}`}
-                >
-                  View profile
-                </p>
-              </div>
-            </div>
-
-            <button
-              className={itemCls}
-              onClick={() => {
-                navigate("/accounts");
-                setOpen(false);
-              }}
-            >
-              <span
-                className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${light ? "bg-gray-100" : "bg-white/8"}`}
-              >
-                <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
-                  <circle
-                    cx="7.5"
-                    cy="5"
-                    r="2.5"
-                    stroke="currentColor"
-                    strokeWidth="1.3"
-                  />
-                  <path
-                    d="M2 13c0-2.8 2.46-5 5.5-5s5.5 2.2 5.5 5"
-                    stroke="currentColor"
-                    strokeWidth="1.3"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>
-              Profile
-            </button>
-
-            <button
-              className={itemCls}
-              onClick={() => {
-                navigate("/settings");
-                setOpen(false);
-              }}
-            >
-              <span
-                className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${light ? "bg-gray-100" : "bg-white/8"}`}
-              >
-                <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
-                  <circle
-                    cx="7.5"
-                    cy="7.5"
-                    r="2"
-                    stroke="currentColor"
-                    strokeWidth="1.3"
-                  />
-                  <path
-                    d="M7.5 1v1.5M7.5 12.5V14M1 7.5h1.5M12.5 7.5H14M2.9 2.9l1.1 1.1M11 11l1.1 1.1M2.9 12.1L4 11M11 4l1.1-1.1"
-                    stroke="currentColor"
-                    strokeWidth="1.3"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>
-              Settings
-            </button>
-
-            <div className={`my-1.5 border-t ${divider}`} />
-
-            <button
-              className={`${itemBase} text-sm font-medium transition-all duration-150 ${light ? "text-red-500 hover:bg-red-50" : "text-red-400 hover:bg-red-900/20"}`}
-              onClick={() => setOpen(false)}
-            >
-              <span
-                className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${light ? "bg-red-50" : "bg-red-900/20"}`}
-              >
-                <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
-                  <path
-                    d="M5 2H2v11h3M10 4l3.5 3.5L10 11M5.5 7.5h8"
-                    stroke="currentColor"
-                    strokeWidth="1.3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </span>
-              Sign out
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
 
 /* ── Mobile Menu ── */
 const MobileMenu = ({ light, t, navigate }) => {
@@ -567,8 +406,8 @@ const LandingPage = () => {
     show: { transition: { staggerChildren: 0.09, delayChildren: 0.2 } },
   };
   const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.5, ease } },
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { duration: 0.5, ease } },
   };
 
   return (
@@ -598,11 +437,8 @@ const LandingPage = () => {
       <RouteAnimation light={light} />
 
       {/* ── Navbar ── */}
-      <motion.nav
-        initial={{ opacity: 0, y: -16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.55, ease }}
-        className={`relative z-40 w-full flex-shrink-0 ${navBg} transition-all duration-300`}
+      <nav
+        className={`fixed top-0 left-0 right-0 z-40 w-full flex-shrink-0 ${navBg} transition-all duration-300`}
       >
         <div
           className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14
@@ -625,8 +461,15 @@ const LandingPage = () => {
                 />
               </svg>
             </div>
-            <span className={`text-lg font-bold tracking-tight ${logoColor}`}>
-              {t.title}
+            <span
+              style={{
+                fontWeight: 800,
+                fontSize: 18,
+                letterSpacing: "-.5px",
+                color: light ? "#0f172a" : "#e8f4f0",
+              }}
+            >
+              Safe<span style={{ color: "#10b981" }}>Yatra</span>
             </span>
           </motion.div>
 
@@ -690,12 +533,7 @@ const LandingPage = () => {
                 transition={{ type: "spring", stiffness: 500, damping: 35 }}
               />
             </button>
-
-            {/* Profile — desktop dropdown */}
-            <div className="hidden md:block">
-              <ProfileMenu light={light} t={t} navigate={navigate} />
-            </div>
-
+    
             {/* Mobile: profile icon + hamburger */}
             <div className="flex md:hidden items-center gap-2">
               <motion.button
@@ -714,7 +552,7 @@ const LandingPage = () => {
             </div>
           </div>
         </div>
-      </motion.nav>
+      </nav>
 
       {/* ── Hero ── */}
       <main className="relative z-20 flex-1 flex flex-col items-center justify-center text-center px-4 sm:px-6 min-h-0">
