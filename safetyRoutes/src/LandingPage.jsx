@@ -473,23 +473,6 @@ const LandingPage = () => {
             </span>
           </motion.div>
 
-          {/* CENTRE: Nav links — desktop only */}
-          <div className="hidden md:flex items-center justify-center gap-7">
-            {[
-              { l: t.howItWorks, p: "/how" },
-              // { l: t.fileReport, p: "/file" },
-              { l: t.aboutUs, p: "/aboutus" },
-            ].map(({ l, p }) => (
-              <motion.button
-                key={p}
-                whileHover={{ y: -1 }}
-                onClick={() => navigate(p)}
-                className={`text-sm font-medium transition-all duration-200 whitespace-nowrap ${navLink}`}
-              >
-                {l}
-              </motion.button>
-            ))}
-          </div>
 
           {/* RIGHT: Controls */}
           <div className="flex items-center justify-end gap-2.5">
