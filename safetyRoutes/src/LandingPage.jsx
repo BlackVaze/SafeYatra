@@ -236,7 +236,7 @@ const MobileMenu = ({ light, t, navigate }) => {
             <div className="py-2">
               {[
                 { l: t.howItWorks, p: "/how" },
-                // { l: t.fileReport, p: "/file" },
+                { l: t.fileReport, p: "/file" },
                 { l: t.aboutUs, p: "/aboutus" },
               ].map(({ l, p }, i) => (
                 <motion.button
@@ -477,7 +477,7 @@ const LandingPage = () => {
           <div className="hidden md:flex items-center justify-center gap-7">
             {[
               { l: t.howItWorks, p: "/how" },
-              { l: t.fileReport, p: "/file" },
+              // { l: t.fileReport, p: "/file" },
               { l: t.aboutUs, p: "/aboutus" },
             ].map(({ l, p }) => (
               <motion.button
