@@ -3,7 +3,13 @@ import Report from '../models/Report.js';
 export const submitReport = async (req, res) => {
     try {
         const { location, time, crime, description } = req.body;
-        const newReport = new Report({ location, time, crime, description });
+        const newReport = new Report({ 
+            userId: req.userId,   // ← comes from authMiddleware
+            location, 
+            time, 
+            crime, 
+            description 
+        });
         await newReport.save();
         res.status(201).json({ message: 'Report submitted successfully' });
     } catch (error) {

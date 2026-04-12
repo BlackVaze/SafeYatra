@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const reportSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     location: { type: String, required: true },
     time: { type: String, required: true },
     crime: { type: String, required: true },
