@@ -1160,10 +1160,10 @@ export default function Map() {
           });
         });
 
-        poly.on("click", () => {
-          L.DomEvent.stopPropagation(e);
+        poly.on("click", (e) => {
+          L.DomEvent.stopPropagation(e); // ← add this line, prevents map click from firing
+
           if (selectedRouteRef.current === poly) {
-            // clicking same route deselects it
             selectedRouteRef.current = null;
             allPolylines.forEach(({ poly: other, weight: ow, opacity: oo }) => {
               other.setStyle({ weight: ow, opacity: oo });
@@ -1173,7 +1173,6 @@ export default function Map() {
             return;
           }
 
-          // select this route
           selectedRouteRef.current = poly;
           allPolylines.forEach(({ poly: other, weight: ow }) => {
             if (other !== poly) {
