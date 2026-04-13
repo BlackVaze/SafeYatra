@@ -293,3 +293,28 @@ export const resetPassword = async (req, res) => {
     });
   }
 };
+
+export const updateSavedLocations = async (req, res) => {
+  try {
+    const { savedLocations } = req.body;
+    if (!Array.isArray(savedLocations)) {
+      return res.status(400).json({ success: false, message: "savedLocations must be an array." });
+    }
+    const cleaned = savedLocations
+      .filter((l) => l.label && l.label.trim())
+      .map((l) => ({ label: l.label.trim(), address: (l.address || "").trim() }));
+
+    const updated = await User.findByIdAndUpdate(
+      req.userId,
+      { savedLocations: cleaned },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!updated) return res.status(404).json({ success: false, message: "User not found." });
+
+    return res.status(200).json({ success: true, message: "Saved locations updated.", savedLocations: updated.savedLocations });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: "An error occurred." });
+  }
+};

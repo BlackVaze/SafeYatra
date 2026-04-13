@@ -43,6 +43,10 @@ const UserSchema = new mongoose.Schema(
     resetPasswordExpiresAt: {
       type: Date,
     },
+    savedLocations: {
+      type: [{ label: String, address: String }],
+      default: [],
+    },
   },
   { timestamps: true },
 );
