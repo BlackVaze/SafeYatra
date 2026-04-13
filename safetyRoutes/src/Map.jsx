@@ -609,9 +609,7 @@ function RouteLegend({ dark, visible, sidebarW }) {
   const t = th(dark);
   const items = [
     { color: SUCCESS, label: "Safest route" },
-    { color: "#6a7fdb", label: "Alternate 1" },
-    { color: "#c38d94", label: "Alternate 2" },
-    { color: "#7b4b94", label: "Alternate 3" },
+    { color: "#6a7fdb", label: "Alternate Routes" },
   ];
   return (
     <div
@@ -894,9 +892,11 @@ export default function Map() {
         mapRef.current = null;
       }
     };
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const style = document.createElement("style");
+  style.innerText = `.leaflet-interactive { transition: stroke-width 0.2s ease, opacity 0.2s ease, filter 0.2s ease; }`;
+  document.head.appendChild(style);
 
   useEffect(() => {
     (async () => {
@@ -1104,6 +1104,19 @@ export default function Map() {
           weight: 4,
           opacity: 0.65,
         }).addTo(map);
+
+        p.on("mouseover", () => {
+          p.setStyle({ weight: 7, opacity: 1 });
+          p.getElement()?.style.setProperty(
+            "filter",
+            `drop-shadow(0 0 6px ${altColors[i % 3]})`,
+          );
+        });
+        p.on("mouseout", () => {
+          p.setStyle({ weight: 4, opacity: 0.65 });
+          p.getElement()?.style.setProperty("filter", "none");
+        });
+
         routeLayersRef.current.push(p);
       });
 
@@ -1113,6 +1126,18 @@ export default function Map() {
         weight: 6,
         opacity: 0.95,
       }).addTo(map);
+
+      safePoly.on("mouseover", () => {
+        safePoly.setStyle({ weight: 10, opacity: 1 });
+        safePoly
+          .getElement()
+          ?.style.setProperty("filter", `drop-shadow(0 0 8px ${SUCCESS})`);
+      });
+      safePoly.on("mouseout", () => {
+        safePoly.setStyle({ weight: 6, opacity: 0.95 });
+        safePoly.getElement()?.style.setProperty("filter", "none");
+      });
+
       routeLayersRef.current.push(safePoly);
 
       // Markers
@@ -1175,6 +1200,7 @@ export default function Map() {
     }
   };
 
+  // ── Simulate navigation ───────────────────────────────────────────────────
   const simulateNavigation = () => {
     const map = mapRef.current;
     const L = leafletRef.current;
@@ -1183,7 +1209,6 @@ export default function Map() {
       return;
     }
 
-    // Get the safe route polyline (last green one drawn)
     const safePolyline = routeLayersRef.current.find(
       (l) => l.options?.color === "#22c55e",
     );
@@ -1195,10 +1220,10 @@ export default function Map() {
     const latlngs = safePolyline.getLatLngs();
     if (!latlngs || latlngs.length === 0) return;
 
-    // Remove any existing simulation marker
+    // Clean up existing simulation
     if (map._simMarker) {
       map.removeLayer(map._simMarker);
-      clearInterval(map._simInterval);
+      cancelAnimationFrame(map._simRaf);
     }
 
     const simMarker = L.circleMarker(latlngs[0], {
@@ -1212,28 +1237,59 @@ export default function Map() {
       .bindTooltip("🚶 Simulating…", { permanent: true, direction: "top" });
 
     map._simMarker = simMarker;
-    let i = 0;
-    const speed = 80; // ms per step, lower = faster
 
-    map._simInterval = setInterval(() => {
-      if (i >= latlngs.length) {
-        clearInterval(map._simInterval);
-        simMarker.setTooltipContent("✅ Arrived!");
-        showToast("Simulation complete!", "success");
+    const totalPoints = latlngs.length;
+    const duration = totalPoints * 80; // total ms for full route, adjust to taste
+    let startTime = null;
+
+    const animate = (timestamp) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1); // 0 to 1
+
+      // Which segment are we on
+      const exactIndex = progress * (totalPoints - 1);
+      const i = Math.floor(exactIndex);
+      const remainder = exactIndex - i;
+
+      if (i >= totalPoints - 1) {
+        simMarker.setLatLng(latlngs[totalPoints - 1]);
+        showToast("Simulation complete! ✅", "success");
+        setTimeout(() => {
+          if (map._simMarker) {
+            map.removeLayer(map._simMarker);
+            map._simMarker = null;
+          }
+        }, 2600);
         return;
       }
-      simMarker.setLatLng(latlngs[i]);
-      map.panTo(latlngs[i], { animate: true, duration: 0.5 });
-      i++;
-    }, speed);
+
+      // Interpolate between point i and i+1 for smooth movement
+      const from = latlngs[i];
+      const to = latlngs[i + 1];
+      const lat = from.lat + (to.lat - from.lat) * remainder;
+      const lng = from.lng + (to.lng - from.lng) * remainder;
+
+      simMarker.setLatLng([lat, lng]);
+      map.panTo([lat, lng], {
+        animate: true,
+        duration: 0.3,
+        easeLinearity: 0.5,
+      });
+
+      map._simRaf = requestAnimationFrame(animate);
+    };
+
+    map._simRaf = requestAnimationFrame(animate);
   };
 
   const stopSimulation = () => {
     const map = mapRef.current;
-    if (map?._simInterval) {
-      clearInterval(map._simInterval);
+    if (map?._simRaf) {
+      cancelAnimationFrame(map._simRaf);
       if (map._simMarker) map.removeLayer(map._simMarker);
       map._simMarker = null;
+      map._simRaf = null;
       showToast("Simulation stopped.", "success");
     }
   };

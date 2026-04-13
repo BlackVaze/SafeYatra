@@ -1,7 +1,6 @@
-// src/App.jsx
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast"; // Import Toaster
-
+import { useLocation } from "react-router-dom";
 import LandingPage from "./LandingPage";
 import LandingPage2 from "./LandingPage2";
 import LoginPage from "./LoginPage";
@@ -17,10 +16,11 @@ import LocationForm from "./LocationForm"; // Import the new LocationForm compon
 import ForgotPassword from "./ForgotPassword";
 import ResetPassword from "./ResetPassword";
 
-function App() {
+function AppContent() {
+  const location = useLocation();
   return (
-    <Router>
-      <BotpressChat />
+    <>
+      {location.pathname !== "/map" && <BotpressChat />}
       <Toaster
         position="top-right"
         toastOptions={{
@@ -61,8 +61,13 @@ function App() {
         <Route path="/how" element={<HowItWorks />} />
         <Route path="/location" element={<LocationForm />} />{" "}
       </Routes>
+    </>
+  );
+}
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }
-
-export default App;
