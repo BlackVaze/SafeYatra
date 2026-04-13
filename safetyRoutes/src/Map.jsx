@@ -884,6 +884,10 @@ export default function Map() {
       hint.addTo(mapInstance);
     };
 
+    const style = document.createElement("style");
+    style.innerText = `.leaflet-interactive { transition: stroke-width 0.2s ease, opacity 0.2s ease, filter 0.2s ease; }`;
+    document.head.appendChild(style);
+
     init();
 
     return () => {
@@ -893,10 +897,6 @@ export default function Map() {
       }
     };
   }, []);
-
-  const style = document.createElement("style");
-  style.innerText = `.leaflet-interactive { transition: stroke-width 0.2s ease, opacity 0.2s ease, filter 0.2s ease; }`;
-  document.head.appendChild(style);
 
   useEffect(() => {
     (async () => {
@@ -915,7 +915,7 @@ export default function Map() {
               savedLocations.map((l) => l.address || l.label || ""),
             );
           }
-        }//tp
+        } //tp
       } catch (e) {
         console.error("Failed to load user data", e);
       }
