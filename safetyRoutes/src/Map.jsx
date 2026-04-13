@@ -608,8 +608,9 @@ function RouteLegend({ dark, visible, sidebarW }) {
   if (!visible) return null;
   const t = th(dark);
   const items = [
-    { color: SUCCESS, label: "Safest route" },
-    { color: "#6a7fdb", label: "Alternate Routes" },
+    { color: "#22c55e", label: "Safest route" },
+    { color: "#6a7fdb", label: "Alternate route 1" },
+    { color: "#f97316", label: "Alternate route 2" },
   ];
   return (
     <div
@@ -1089,55 +1090,66 @@ export default function Map() {
       if (!safeRoute || safeRoute.length === 0)
         throw new Error("No route returned from server.");
 
-      // Draw alternates first (under safe route)
-      const altColors = ["#6a7fdb", "#c38d94", "#7b4b94"];
-      const altRoutes = [
-        altData["alternate_routes"],
-        altData["route-1"],
-        altData["route-2"],
-        altData["route-3"],
-      ].filter((r) => r && r.length > 0);
-
-      altRoutes.forEach((route, i) => {
-        const p = L.polyline(route, {
-          color: altColors[i % 3],
+      // Draw alternate 1
+      const alt1 = altData["route-1"] || altData["alternate_routes"];
+      if (alt1?.length) {
+        const p = L.polyline(alt1, {
+          color: "#6a7fdb",
           weight: 4,
           opacity: 0.65,
         }).addTo(map);
-
         p.on("mouseover", () => {
           p.setStyle({ weight: 7, opacity: 1 });
           p.getElement()?.style.setProperty(
             "filter",
-            `drop-shadow(0 0 6px ${altColors[i % 3]})`,
+            "drop-shadow(0 0 6px #6a7fdb)",
           );
         });
         p.on("mouseout", () => {
           p.setStyle({ weight: 4, opacity: 0.65 });
           p.getElement()?.style.setProperty("filter", "none");
         });
-
         routeLayersRef.current.push(p);
-      });
+      }
 
-      // Draw safe route on top
+      // Draw alternate 2
+      const alt2 = altData["route-2"];
+      if (alt2?.length) {
+        const p = L.polyline(alt2, {
+          color: "#f97316",
+          weight: 4,
+          opacity: 0.65,
+        }).addTo(map);
+        p.on("mouseover", () => {
+          p.setStyle({ weight: 7, opacity: 1 });
+          p.getElement()?.style.setProperty(
+            "filter",
+            "drop-shadow(0 0 6px #f97316)",
+          );
+        });
+        p.on("mouseout", () => {
+          p.setStyle({ weight: 4, opacity: 0.65 });
+          p.getElement()?.style.setProperty("filter", "none");
+        });
+        routeLayersRef.current.push(p);
+      }
+
+      // Draw safest route on top
       const safePoly = L.polyline(safeRoute, {
-        color: SUCCESS,
+        color: "#22c55e",
         weight: 6,
         opacity: 0.95,
       }).addTo(map);
-
       safePoly.on("mouseover", () => {
         safePoly.setStyle({ weight: 10, opacity: 1 });
         safePoly
           .getElement()
-          ?.style.setProperty("filter", `drop-shadow(0 0 8px ${SUCCESS})`);
+          ?.style.setProperty("filter", "drop-shadow(0 0 8px #22c55e)");
       });
       safePoly.on("mouseout", () => {
         safePoly.setStyle({ weight: 6, opacity: 0.95 });
         safePoly.getElement()?.style.setProperty("filter", "none");
       });
-
       routeLayersRef.current.push(safePoly);
 
       // Markers
