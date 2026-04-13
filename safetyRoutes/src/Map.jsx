@@ -795,6 +795,7 @@ export default function Map() {
   const leafletRef = useRef(null);
   const routeLayersRef = useRef([]);
   const hotspotRef = useRef(null);
+  const selectedRouteRef = useRef(null);
 
   // Hotspots
   const [hotspotsVisible, setHotspotsVisible] = useState(false);
@@ -1137,6 +1138,8 @@ export default function Map() {
       // Attach hover events after all polylines are created
       allPolylines.forEach(({ poly, color, weight, opacity }) => {
         poly.on("mouseover", () => {
+          if (selectedRouteRef.current && selectedRouteRef.current !== poly)
+            return;
           allPolylines.forEach(({ poly: other, weight: ow }) => {
             if (other !== poly) {
               other.setStyle({ opacity: 0.15, weight: ow });
@@ -1150,10 +1153,41 @@ export default function Map() {
         });
 
         poly.on("mouseout", () => {
+          if (selectedRouteRef.current) return; // don't restore if a route is selected
           allPolylines.forEach(({ poly: other, weight: ow, opacity: oo }) => {
             other.setStyle({ weight: ow, opacity: oo });
             other.getElement()?.style.setProperty("filter", "none");
           });
+        });
+
+        poly.on("click", () => {
+          if (selectedRouteRef.current === poly) {
+            // clicking same route deselects it
+            selectedRouteRef.current = null;
+            allPolylines.forEach(({ poly: other, weight: ow, opacity: oo }) => {
+              other.setStyle({ weight: ow, opacity: oo });
+              other.getElement()?.style.setProperty("filter", "none");
+            });
+            showToast("Route deselected.", "success");
+            return;
+          }
+
+          // select this route
+          selectedRouteRef.current = poly;
+          allPolylines.forEach(({ poly: other, weight: ow }) => {
+            if (other !== poly) {
+              other.setStyle({ opacity: 0.15, weight: ow });
+              other.getElement()?.style.setProperty("filter", "none");
+            }
+          });
+          poly.setStyle({ weight: weight + 3, opacity: 1 });
+          poly
+            .getElement()
+            ?.style.setProperty("filter", `drop-shadow(0 0 8px ${color})`);
+          showToast(
+            "Route selected! Press ▶️ Simulate to navigate it.",
+            "success",
+          );
         });
       });
 
@@ -1258,26 +1292,29 @@ export default function Map() {
       return;
     }
 
-    const safePolyline = routeLayersRef.current.find(
-      (l) => l.options?.color === "#22c55e",
-    );
-    if (!safePolyline) {
-      showToast("No safe route found to simulate.");
+    // use selected route if available, otherwise fall back to safest
+    const targetPolyline =
+      selectedRouteRef.current ||
+      routeLayersRef.current.find((l) => l.options?.color === "#22c55e");
+
+    if (!targetPolyline) {
+      showToast("No route found to simulate.");
       return;
     }
 
-    const latlngs = safePolyline.getLatLngs();
+    const latlngs = targetPolyline.getLatLngs();
     if (!latlngs || latlngs.length === 0) return;
 
-    // Clean up existing simulation
     if (map._simMarker) {
       map.removeLayer(map._simMarker);
       cancelAnimationFrame(map._simRaf);
     }
 
+    const color = targetPolyline.options?.color || "#22c55e";
+
     const simMarker = L.circleMarker(latlngs[0], {
       radius: 9,
-      fillColor: "#f59e0b",
+      fillColor: color,
       color: "#fff",
       weight: 2.5,
       fillOpacity: 1,
@@ -1288,15 +1325,14 @@ export default function Map() {
     map._simMarker = simMarker;
 
     const totalPoints = latlngs.length;
-    const duration = totalPoints * 80; // total ms for full route, adjust to taste
+    const duration = totalPoints * 80;
     let startTime = null;
 
     const animate = (timestamp) => {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
-      const progress = Math.min(elapsed / duration, 1); // 0 to 1
+      const progress = Math.min(elapsed / duration, 1);
 
-      // Which segment are we on
       const exactIndex = progress * (totalPoints - 1);
       const i = Math.floor(exactIndex);
       const remainder = exactIndex - i;
@@ -1313,7 +1349,6 @@ export default function Map() {
         return;
       }
 
-      // Interpolate between point i and i+1 for smooth movement
       const from = latlngs[i];
       const to = latlngs[i + 1];
       const lat = from.lat + (to.lat - from.lat) * remainder;
