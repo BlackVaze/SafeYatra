@@ -820,6 +820,10 @@ export default function Map() {
     // Prevent double-init in React StrictMode
     if (mapRef.current) return;
 
+    const style = document.createElement("style");
+    style.innerText = `.leaflet-interactive { transition: stroke-width 0.2s ease, opacity 0.2s ease, filter 0.2s ease; }`;
+    document.head.appendChild(style);
+
     const init = async () => {
       const leafletMod = await import("leaflet");
       const L = leafletMod.default ?? leafletMod;
@@ -883,10 +887,6 @@ export default function Map() {
       };
       hint.addTo(mapInstance);
     };
-
-    const style = document.createElement("style");
-    style.innerText = `.leaflet-interactive { transition: stroke-width 0.2s ease, opacity 0.2s ease, filter 0.2s ease; }`;
-    document.head.appendChild(style);
 
     init();
 
