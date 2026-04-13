@@ -310,8 +310,6 @@ const ContactCard = ({ contact, index, onChange, onDelete, dark }) => {
     outline: "none",
   };
 
-  const hasPhone = contact.phone?.trim().length > 0;
-
   return (
     <div
       style={{
@@ -380,52 +378,7 @@ const ContactCard = ({ contact, index, onChange, onDelete, dark }) => {
         </div>
       </div>
 
-      {/* Call button */}
-      <a
-        href={hasPhone ? `tel:${contact.phone.trim()}` : undefined}
-        title={
-          hasPhone ? `Call ${contact.name || "contact"}` : "No phone number set"
-        }
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 30,
-          height: 30,
-          borderRadius: 8,
-          background: hasPhone ? "rgba(34,197,94,0.15)" : "transparent",
-          border: `1px solid ${
-            hasPhone ? "rgba(34,197,94,0.3)" : dark ? "#334155" : "#cbd5e1"
-          }`,
-          color: hasPhone ? "#22c55e" : dark ? "#334155" : "#cbd5e1",
-          textDecoration: "none",
-          opacity: hasPhone ? 1 : 0.35,
-          pointerEvents: hasPhone ? "auto" : "none",
-          flexShrink: 0,
-          transition: "all .15s",
-        }}
-        onMouseEnter={(e) => {
-          if (hasPhone)
-            e.currentTarget.style.background = "rgba(34,197,94,0.28)";
-        }}
-        onMouseLeave={(e) => {
-          if (hasPhone)
-            e.currentTarget.style.background = "rgba(34,197,94,0.15)";
-        }}
-      >
-        <svg
-          width="13"
-          height="13"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 012 2.18 2 2 0 014 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
-        </svg>
-      </a>
+
 
       {/* Delete button */}
       <button

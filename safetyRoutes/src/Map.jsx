@@ -233,21 +233,136 @@ function RecentPopup({ dark, recentAddresses, onClose }) {
 }
 
 // ─── Emergency Contacts ───────────────────────────────────────────────────────
-function PhonePopup({ dark, phoneNumbers, onUpdate, onClose }) {
+function PhonePopup({ dark, phoneNumbers, onClose }) {
+  const t = th(dark);
+
   return (
     <Modal dark={dark} title="📞  Emergency Contacts" onClose={onClose}>
+      {phoneNumbers.length === 0 && (
+        <p
+          style={{
+            fontSize: 13,
+            color: t.muted,
+            textAlign: "center",
+            padding: "12px 0",
+          }}
+        >
+          No emergency contacts saved. Add them in your Account settings.
+        </p>
+      )}
+
       {phoneNumbers.map((num, i) => (
-        <div key={i}>
-          <Label dark={dark}>
-            {i === 0 ? "Emergency (911)" : `Contact ${i}`}
-          </Label>
-          <Input
-            dark={dark}
-            value={num}
-            onChange={(e) => onUpdate(i, e.target.value)}
-            placeholder="Phone number"
-            type="tel"
-          />
+        <div
+          key={i}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: t.elevated,
+            gap: 12,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              minWidth: 0,
+            }}
+          >
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                flexShrink: 0,
+                background: dark ? "#1e3a5f" : "#dbeafe",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 13,
+                fontWeight: 700,
+                color: dark ? "#93c5fd" : "#1d4ed8",
+              }}
+            >
+              {num.name ? num.name[0].toUpperCase() : "#"}
+            </div>
+
+            <div style={{ minWidth: 0 }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: t.text,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {num.name || "Contact"}
+              </p>
+              <p style={{ margin: 0, fontSize: 12, color: t.muted }}>
+                {num.phone || "No number"}
+              </p>
+            </div>
+          </div>
+
+          {/* Call button */}
+          <a
+            href={num.phone?.trim() ? `tel:${num.phone.trim()}` : undefined}
+            title={
+              num.phone?.trim()
+                ? `Call ${num.name || "contact"}`
+                : "No phone number"
+            }
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              padding: "7px 14px",
+              borderRadius: 8,
+              background: num.phone?.trim()
+                ? "rgba(34,197,94,0.15)"
+                : "transparent",
+              border: `1px solid ${
+                num.phone?.trim() ? "rgba(34,197,94,0.3)" : t.border
+              }`,
+              color: num.phone?.trim() ? "#22c55e" : t.muted,
+              textDecoration: "none",
+              fontSize: 12,
+              fontWeight: 600,
+              opacity: num.phone?.trim() ? 1 : 0.4,
+              pointerEvents: num.phone?.trim() ? "auto" : "none",
+              flexShrink: 0,
+              transition: "all .15s",
+            }}
+            onMouseEnter={(e) => {
+              if (num.phone?.trim())
+                e.currentTarget.style.background = "rgba(34,197,94,0.28)";
+            }}
+            onMouseLeave={(e) => {
+              if (num.phone?.trim())
+                e.currentTarget.style.background = "rgba(34,197,94,0.15)";
+            }}
+          >
+            <svg
+              width="12"
+              height="12"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 012 2.18 2 2 0 014 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
+            </svg>
+            Call
+          </a>
         </div>
       ))}
     </Modal>
@@ -699,9 +814,7 @@ export default function Map() {
         if (res.data.success) {
           const { emergencyContacts, savedLocations } = res.data.user;
           if (emergencyContacts?.length) {
-            setPhoneNumbers(
-              emergencyContacts.map((c) => c.phone || "").filter(Boolean),
-            );
+            setPhoneNumbers(emergencyContacts); 
           }
           if (savedLocations?.length) {
             setSavedAddresses(
@@ -1205,11 +1318,6 @@ export default function Map() {
         <PhonePopup
           dark={dark}
           phoneNumbers={phoneNumbers}
-          onUpdate={(i, v) => {
-            const n = [...phoneNumbers];
-            n[i] = v;
-            setPhoneNumbers(n);
-          }}
           onClose={() => setShowPhone(false)}
         />
       )}
