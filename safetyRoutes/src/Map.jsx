@@ -871,22 +871,22 @@ export default function Map() {
       // L.control.zoom({ position: "bottomright" }).addTo(mapInstance);
 
       mapRef.current = mapInstance;
-    };
 
-    init();
-
-    const hint = L.control({ position: "bottomright" });
-    hint.onAdd = () => {
-      const div = L.DomUtil.create("div");
-      div.style.cssText = `
+      const hint = L.control({ position: "bottomright" });
+      hint.onAdd = () => {
+        const div = L.DomUtil.create("div");
+        div.style.cssText = `
     background: rgba(0,0,0,0.6); color: #fff; padding: 6px 12px;
     border-radius: 8px; font-size: 11px; font-family: sans-serif;
     backdrop-filter: blur(6px); pointer-events: none;
   `;
-      div.innerText = "💡 Click anywhere on the map to set destination";
-      return div;
+        div.innerText = "💡 Click anywhere on the map to set destination";
+        return div;
+      };
+      hint.addTo(mapInstance);
     };
-    hint.addTo(mapInstance);
+
+    init();
 
     return () => {
       if (mapRef.current) {
