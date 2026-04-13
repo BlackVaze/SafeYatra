@@ -59,7 +59,7 @@ export const loginUser = async (req, res) => {
     const accessToken = jwt.sign(
       { userId: user._id, email: user.email },
       process.env.JWT_SECRET_KEY,
-      { expiresIn: "7d" }
+      { expiresIn: "7d" },
     );
 
     // Exclude the password hash from the response
@@ -93,7 +93,9 @@ export const logoutUser = (req, res) => {
     secure: process.env.NODE_ENV === "production",
     sameSite: "none",
   });
-  return res.status(200).json({ success: true, message: "Logged out successfully." });
+  return res
+    .status(200)
+    .json({ success: true, message: "Logged out successfully." });
 };
 
 // Get current user
@@ -101,7 +103,9 @@ export const getUser = async (req, res) => {
   try {
     const user = await User.findById(req.userId).select("-password");
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
     }
     return res.status(200).json({ success: true, user });
   } catch (error) {
@@ -141,11 +145,13 @@ export const updateUser = async (req, res) => {
         ...(email && { email }),
         ...(phone !== undefined && { phone }),
       },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).select("-password");
 
     if (!updated) {
-      return res.status(404).json({ success: false, message: "User not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
     }
 
     return res.status(200).json({
@@ -185,11 +191,13 @@ export const updateEmergencyContacts = async (req, res) => {
     const updated = await User.findByIdAndUpdate(
       req.userId,
       { emergencyContacts: cleaned },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).select("-password");
 
     if (!updated) {
-      return res.status(404).json({ success: false, message: "User not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
     }
 
     return res.status(200).json({
@@ -298,23 +306,72 @@ export const updateSavedLocations = async (req, res) => {
   try {
     const { savedLocations } = req.body;
     if (!Array.isArray(savedLocations)) {
-      return res.status(400).json({ success: false, message: "savedLocations must be an array." });
+      return res
+        .status(400)
+        .json({ success: false, message: "savedLocations must be an array." });
     }
     const cleaned = savedLocations
       .filter((l) => l.label && l.label.trim())
-      .map((l) => ({ label: l.label.trim(), address: (l.address || "").trim() }));
+      .map((l) => ({
+        label: l.label.trim(),
+        address: (l.address || "").trim(),
+      }));
 
     const updated = await User.findByIdAndUpdate(
       req.userId,
       { savedLocations: cleaned },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     ).select("-password");
 
-    if (!updated) return res.status(404).json({ success: false, message: "User not found." });
+    if (!updated)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
 
-    return res.status(200).json({ success: true, message: "Saved locations updated.", savedLocations: updated.savedLocations });
+    return res
+      .status(200)
+      .json({
+        success: true,
+        message: "Saved locations updated.",
+        savedLocations: updated.savedLocations,
+      });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ success: false, message: "An error occurred." });
+    return res
+      .status(500)
+      .json({ success: false, message: "An error occurred." });
+  }
+};
+
+export const updateRecentSearches = async (req, res) => {
+  try {
+    const { destination } = req.body;
+    if (!destination || !destination.trim()) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Destination is required." });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+
+    // Remove duplicate if exists, add to front, keep only 3
+    const updated = [
+      destination.trim(),
+      ...user.recentSearches.filter((r) => r !== destination.trim()),
+    ].slice(0, 3);
+
+    user.recentSearches = updated;
+    await user.save();
+
+    return res.status(200).json({ success: true, recentSearches: updated });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ success: false, message: "An error occurred." });
   }
 };

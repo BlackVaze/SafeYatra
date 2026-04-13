@@ -47,6 +47,10 @@ const UserSchema = new mongoose.Schema(
       type: [{ label: String, address: String }],
       default: [],
     },
+    recentSearches: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true },
 );

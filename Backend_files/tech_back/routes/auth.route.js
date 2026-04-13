@@ -8,7 +8,8 @@ import {
   updateEmergencyContacts,
   forgotPassword,
   resetPassword,
-  updateSavedLocations
+  updateSavedLocations,
+  updateRecentSearches,
 } from "../controllers/auth.controller.js";
 import authMiddleware from "../middleware/auth.middleware.js";
 
@@ -23,6 +24,7 @@ router.post("/reset-password/:token", resetPassword);
 
 // Protected routes
 router.get("/getuser", authMiddleware, getUser);
+router.put("/recent-searches", authMiddleware, updateRecentSearches);
 router.put("/saved-locations", authMiddleware, updateSavedLocations);
 router.put("/updateuser", authMiddleware, updateUser);
 router.put("/emergency-contacts", authMiddleware, updateEmergencyContacts);

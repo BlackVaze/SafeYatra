@@ -207,31 +207,56 @@ function SavedPopup({ dark, savedAddresses, onSave, onClose }) {
 }
 
 // ─── Recent Locations ─────────────────────────────────────────────────────────
-function RecentPopup({ dark, recentAddresses, onClose }) {
+function RecentPopup({ dark, recentAddresses, onSelect, onClose }) {
   const t = th(dark);
   return (
     <Modal dark={dark} title="🕘  Recent Locations" onClose={onClose}>
-      {recentAddresses.map((addr, i) => (
-        <div
-          key={i}
+      {recentAddresses.length === 0 && (
+        <p
           style={{
+            fontSize: 13,
+            color: t.muted,
+            textAlign: "center",
+            padding: "12px 0",
+          }}
+        >
+          No recent searches yet
+        </p>
+      )}
+      {recentAddresses.map((addr, i) => (
+        <button
+          key={i}
+          onClick={() => {
+            onSelect(addr);
+            onClose();
+          }}
+          style={{
+            width: "100%",
+            textAlign: "left",
             padding: "10px 14px",
             borderRadius: 10,
             background: t.elevated,
             color: t.text,
             fontSize: 14,
+            border: "none",
+            cursor: "pointer",
             display: "flex",
             alignItems: "center",
             gap: 10,
+            fontFamily: "inherit",
+            transition: "background 0.15s",
           }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.background = dark ? "#1c2128" : "#e2e8f0")
+          }
+          onMouseLeave={(e) => (e.currentTarget.style.background = t.elevated)}
         >
           <span style={{ opacity: 0.4 }}>📍</span> {addr}
-        </div>
+        </button>
       ))}
     </Modal>
   );
 }
-
 // ─── Emergency Contacts ───────────────────────────────────────────────────────
 function PhonePopup({ dark, phoneNumbers, onClose }) {
   const t = th(dark);
@@ -731,11 +756,7 @@ export default function Map() {
 
   // Data
   const [savedAddresses, setSavedAddresses] = useState([]);
-  const recentAddresses = [
-    "123 Main St, Austin, TX",
-    "456 Park Ave, Houston, TX",
-    "789 Oak Rd, Dallas, TX",
-  ];
+  const [recentAddresses, setRecentAddresses] = useState([]);
   const [phoneNumbers, setPhoneNumbers] = useState([]);
 
   // Toast
@@ -814,7 +835,10 @@ export default function Map() {
         if (res.data.success) {
           const { emergencyContacts, savedLocations } = res.data.user;
           if (emergencyContacts?.length) {
-            setPhoneNumbers(emergencyContacts); 
+            setPhoneNumbers(emergencyContacts);
+          }
+          if (res.data.user.recentSearches?.length) {
+            setRecentAddresses(res.data.user.recentSearches);
           }
           if (savedLocations?.length) {
             setSavedAddresses(
@@ -1057,6 +1081,14 @@ export default function Map() {
       }
 
       setRouteVisible(true);
+      try {
+        const res = await API.put("/api/auth/recent-searches", {
+          destination: endLocation,
+        });
+        if (res.data.success) setRecentAddresses(res.data.recentSearches);
+      } catch (e) {
+        console.error("Failed to save recent search", e);
+      }
       showToast("Safest route found! 🛡", "success");
     } catch (err) {
       showToast(
@@ -1311,6 +1343,10 @@ export default function Map() {
         <RecentPopup
           dark={dark}
           recentAddresses={recentAddresses}
+          onSelect={(addr) => {
+            setEndLocation(addr);
+            setShowRouteDialog(true);
+          }}
           onClose={() => setShowRecent(false)}
         />
       )}
