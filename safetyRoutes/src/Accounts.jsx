@@ -378,8 +378,6 @@ const ContactCard = ({ contact, index, onChange, onDelete, dark }) => {
         </div>
       </div>
 
-
-
       {/* Delete button */}
       <button
         onClick={() => onDelete(index)}
@@ -454,6 +452,9 @@ export default function ProfilePage() {
         const res = await API.get("/api/auth/getuser");
         if (res.data.success) {
           setProfile(res.data.user);
+        }
+        if (res.data.user.emergencyContacts?.length) {
+          setContacts(res.data.user.emergencyContacts);
         }
         if (res.data.user.savedLocations?.length)
           setSavedLocations(res.data.user.savedLocations);
