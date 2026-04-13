@@ -1085,6 +1085,8 @@ export default function Map() {
 
       const safeData = await safeRes.json();
       const altData = await altRes.json().catch(() => ({}));
+      console.log("ALT DATA KEYS:", Object.keys(altData));
+      console.log("ALT DATA:", JSON.stringify(altData));
 
       const safeRoute = safeData["safest_route"];
       if (!safeRoute || safeRoute.length === 0)
