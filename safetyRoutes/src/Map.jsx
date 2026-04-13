@@ -1091,47 +1091,48 @@ export default function Map() {
         throw new Error("No route returned from server.");
 
       // Draw alternate 1
+      // Draw alternate 1
       const alt1 = altData["route-1"] || altData["alternate_routes"];
       if (alt1?.length) {
-        const p = L.polyline(alt1, {
+        const p1 = L.polyline(alt1, {
           color: "#6a7fdb",
           weight: 4,
           opacity: 0.65,
         }).addTo(map);
-        p.on("mouseover", () => {
-          p.setStyle({ weight: 7, opacity: 1 });
-          p.getElement()?.style.setProperty(
+        p1.on("mouseover", () => {
+          p1.setStyle({ weight: 7, opacity: 1 });
+          p1.getElement()?.style.setProperty(
             "filter",
             "drop-shadow(0 0 6px #6a7fdb)",
           );
         });
-        p.on("mouseout", () => {
-          p.setStyle({ weight: 4, opacity: 0.65 });
-          p.getElement()?.style.setProperty("filter", "none");
+        p1.on("mouseout", () => {
+          p1.setStyle({ weight: 4, opacity: 0.65 });
+          p1.getElement()?.style.setProperty("filter", "none");
         });
-        routeLayersRef.current.push(p);
+        routeLayersRef.current.push(p1);
       }
 
       // Draw alternate 2
       const alt2 = altData["route-2"];
       if (alt2?.length) {
-        const p = L.polyline(alt2, {
+        const p2 = L.polyline(alt2, {
           color: "#f97316",
           weight: 4,
           opacity: 0.65,
         }).addTo(map);
-        p.on("mouseover", () => {
-          p.setStyle({ weight: 7, opacity: 1 });
-          p.getElement()?.style.setProperty(
+        p2.on("mouseover", () => {
+          p2.setStyle({ weight: 7, opacity: 1 });
+          p2.getElement()?.style.setProperty(
             "filter",
             "drop-shadow(0 0 6px #f97316)",
           );
         });
-        p.on("mouseout", () => {
-          p.setStyle({ weight: 4, opacity: 0.65 });
-          p.getElement()?.style.setProperty("filter", "none");
+        p2.on("mouseout", () => {
+          p2.setStyle({ weight: 4, opacity: 0.65 });
+          p2.getElement()?.style.setProperty("filter", "none");
         });
-        routeLayersRef.current.push(p);
+        routeLayersRef.current.push(p2);
       }
 
       // Draw safest route on top
