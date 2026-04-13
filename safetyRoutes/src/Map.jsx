@@ -210,7 +210,7 @@ function SavedPopup({ dark, savedAddresses, onSave, onClose }) {
 function RecentPopup({ dark, recentAddresses, onSelect, onClose }) {
   const t = th(dark);
   return (
-    <Modal dark={dark} title="🕘  Recent Locations" onClose={onClose}>
+    <Modal dark={dark} title="🕘 Latest Searches" onClose={onClose}>
       {recentAddresses.length === 0 && (
         <p
           style={{
@@ -436,6 +436,56 @@ function RouteDialog({
             onChange={(e) => onChangeEnd(e.target.value)}
             placeholder="lat,lng — e.g. 41.9163,-87.6559"
           />
+        </div>
+
+        {/* Quick landmarks */}
+        <div>
+          <Label dark={dark}>Quick destinations</Label>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {[
+              { name: "Willis Tower", coords: "41.87884,-87.63596" },
+              { name: "Navy Pier", coords: "41.89179,-87.60899" },
+              { name: "Millennium Park", coords: "41.88275,-87.62327" },
+              { name: "O'Hare Airport", coords: "41.97432,-87.90720" },
+              { name: "Wrigley Field", coords: "41.94781,-87.65566" },
+              { name: "Lincoln Park Zoo", coords: "41.92118,-87.63381" },
+            ].map((place) => (
+              <button
+                key={place.name}
+                type="button"
+                onClick={() => onChangeEnd(place.coords)}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 99,
+                  border: `1px solid ${endLocation === place.coords ? ACCENT : t.border}`,
+                  background:
+                    endLocation === place.coords
+                      ? "rgba(37,99,235,0.12)"
+                      : t.elevated,
+                  color: endLocation === place.coords ? ACCENT : t.text,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  if (endLocation !== place.coords) {
+                    e.currentTarget.style.borderColor = ACCENT;
+                    e.currentTarget.style.color = ACCENT;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (endLocation !== place.coords) {
+                    e.currentTarget.style.borderColor = t.border;
+                    e.currentTarget.style.color = t.text;
+                  }
+                }}
+              >
+                {place.name}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Info box */}
@@ -740,6 +790,8 @@ export default function Map() {
   const [routeVisible, setRouteVisible] = useState(false);
 
   // Map refs — never trigger re-renders
+  const endLocationSetterRef = useRef(null);
+  const showRouteDialogSetterRef = useRef(null);
   const mapRef = useRef(null);
   const leafletRef = useRef(null);
   const routeLayersRef = useRef([]);
@@ -789,9 +841,13 @@ export default function Map() {
       });
 
       mapInstance.setView([41.8781, -87.6298], 12);
+      mapInstance.on("click", (e) => {
+        const lat = e.latlng.lat.toFixed(5);
+        const lng = e.latlng.lng.toFixed(5);
+        endLocationSetterRef.current?.(`${lat},${lng}`);
+        showRouteDialogSetterRef.current?.(true);
+      });
 
-      // Fix "4 tiles only" bug: Leaflet must recalculate container
-      // size after the DOM is fully painted
       setTimeout(() => {
         mapInstance.invalidateSize();
       }, 0);
@@ -819,12 +875,26 @@ export default function Map() {
 
     init();
 
+    const hint = L.control({ position: "bottomright" });
+    hint.onAdd = () => {
+      const div = L.DomUtil.create("div");
+      div.style.cssText = `
+    background: rgba(0,0,0,0.6); color: #fff; padding: 6px 12px;
+    border-radius: 8px; font-size: 11px; font-family: sans-serif;
+    backdrop-filter: blur(6px); pointer-events: none;
+  `;
+      div.innerText = "💡 Click anywhere on the map to set destination";
+      return div;
+    };
+    hint.addTo(mapInstance);
+
     return () => {
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
       }
     };
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -851,6 +921,11 @@ export default function Map() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    endLocationSetterRef.current = setEndLocation;
+    showRouteDialogSetterRef.current = setShowRouteDialog;
+  });
 
   // ── Theme switch ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1100,6 +1175,69 @@ export default function Map() {
     }
   };
 
+  const simulateNavigation = () => {
+    const map = mapRef.current;
+    const L = leafletRef.current;
+    if (!map || !L || routeLayersRef.current.length === 0) {
+      showToast("Plan a route first before simulating.");
+      return;
+    }
+
+    // Get the safe route polyline (last green one drawn)
+    const safePolyline = routeLayersRef.current.find(
+      (l) => l.options?.color === "#22c55e",
+    );
+    if (!safePolyline) {
+      showToast("No safe route found to simulate.");
+      return;
+    }
+
+    const latlngs = safePolyline.getLatLngs();
+    if (!latlngs || latlngs.length === 0) return;
+
+    // Remove any existing simulation marker
+    if (map._simMarker) {
+      map.removeLayer(map._simMarker);
+      clearInterval(map._simInterval);
+    }
+
+    const simMarker = L.circleMarker(latlngs[0], {
+      radius: 9,
+      fillColor: "#f59e0b",
+      color: "#fff",
+      weight: 2.5,
+      fillOpacity: 1,
+    })
+      .addTo(map)
+      .bindTooltip("🚶 Simulating…", { permanent: true, direction: "top" });
+
+    map._simMarker = simMarker;
+    let i = 0;
+    const speed = 80; // ms per step, lower = faster
+
+    map._simInterval = setInterval(() => {
+      if (i >= latlngs.length) {
+        clearInterval(map._simInterval);
+        simMarker.setTooltipContent("✅ Arrived!");
+        showToast("Simulation complete!", "success");
+        return;
+      }
+      simMarker.setLatLng(latlngs[i]);
+      map.panTo(latlngs[i], { animate: true, duration: 0.5 });
+      i++;
+    }, speed);
+  };
+
+  const stopSimulation = () => {
+    const map = mapRef.current;
+    if (map?._simInterval) {
+      clearInterval(map._simInterval);
+      if (map._simMarker) map.removeLayer(map._simMarker);
+      map._simMarker = null;
+      showToast("Simulation stopped.", "success");
+    }
+  };
+
   // ── Derived ─────────────────────────────────────────────────────────────────
   const sidebarW = sidebarOpen ? 220 : 64;
   const t = th(dark);
@@ -1221,6 +1359,18 @@ export default function Map() {
               label: hotspotsVisible ? "Hide Hotspots" : "Crime Hotspots",
               onClick: toggleHotspots,
               active: hotspotsVisible,
+            },
+            {
+              icon: "▶️",
+              label: "Simulate Route",
+              onClick: simulateNavigation,
+              active: false,
+            },
+            {
+              icon: "⏹️",
+              label: "Stop Simulation",
+              onClick: stopSimulation,
+              active: false,
             },
           ].map((item) => (
             <NavBtn
