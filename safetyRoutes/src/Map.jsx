@@ -1127,6 +1127,13 @@ export default function Map() {
       });
       routeLayersRef.current.push(safePoly);
 
+      map.fitBounds(safePoly.getBounds(), {
+        padding: [80, 80],
+        maxZoom: 15,
+        animate: true,
+        duration: 1.2,
+      });
+
       // Attach hover events after all polylines are created
       allPolylines.forEach(({ poly, color, weight, opacity }) => {
         poly.on("mouseover", () => {
@@ -1155,22 +1162,16 @@ export default function Map() {
         className: "",
         html: `
     <div style="
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    ">
-      <div style="
-        width: 18px; height: 18px;
-        background: #22c55e;
-        border: 3px solid #fff;
-        border-radius: 50%;
-        box-shadow: 0 0 0 3px rgba(34,197,94,0.4), 0 4px 12px rgba(0,0,0,0.3);
-      "></div>
-    </div>
+      width: 24px; height: 24px;
+      background: #3b82f6;
+      border: 3px solid #fff;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      box-shadow: 0 4px 14px rgba(59,130,246,0.5);
+    "></div>
   `,
-        iconSize: [18, 18],
-        iconAnchor: [9, 9],
+        iconSize: [24, 24],
+        iconAnchor: [12, 24],
       });
 
       const startM = L.marker(safeRoute[0], { icon: startIcon }).addTo(map)
@@ -1187,32 +1188,17 @@ export default function Map() {
         className: "",
         html: `
     <div style="
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    ">
-      <div style="
-        width: 32px; height: 32px;
-        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-        border: 3px solid #fff;
-        border-radius: 50% 50% 50% 0;
-        transform: rotate(-45deg);
-        box-shadow: 0 4px 14px rgba(59,130,246,0.5), 0 2px 6px rgba(0,0,0,0.3);
-      ">
-        <div style="
-          position: absolute; inset: 0;
-          display: flex; align-items: center; justify-content: center;
-          transform: rotate(45deg);
-          font-size: 13px;
-        ">🏁</div>
-      </div>
-    </div>
+      width: 24px; height: 24px;
+      background: #ef4444;
+      border: 3px solid #fff;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      box-shadow: 0 4px 14px rgba(239,68,68,0.5);
+    "></div>
   `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
+        iconSize: [24, 24],
+        iconAnchor: [12, 24],
       });
-
       const endM = L.marker(safeRoute[safeRoute.length - 1], {
         icon: endIcon,
       }).addTo(map).bindPopup(`
