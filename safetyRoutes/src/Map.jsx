@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import HelpButton from "./HelpButton";
 import PoliceStationsPopup from "./PoliceStationsPopup";
 import "leaflet/dist/leaflet.css";
+import API from "./api/axios";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const ACCENT = "#2563eb";
@@ -614,19 +615,13 @@ export default function Map() {
   const [showPolice, setShowPolice] = useState(false);
 
   // Data
-  const [savedAddresses, setSavedAddresses] = useState(["", "", "", "", ""]);
+  const [savedAddresses, setSavedAddresses] = useState([]);
   const recentAddresses = [
     "123 Main St, Austin, TX",
     "456 Park Ave, Houston, TX",
     "789 Oak Rd, Dallas, TX",
   ];
-  const [phoneNumbers, setPhoneNumbers] = useState([
-    "911",
-    "512-555-0123",
-    "713-555-0456",
-    "214-555-0789",
-    "832-555-0321",
-  ]);
+  const [phoneNumbers, setPhoneNumbers] = useState([]);
 
   // Toast
   const [toast, setToast] = useState(null);
@@ -695,6 +690,29 @@ export default function Map() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await API.get("/api/auth/getuser");
+        if (res.data.success) {
+          const { emergencyContacts, savedLocations } = res.data.user;
+          if (emergencyContacts?.length) {
+            setPhoneNumbers(
+              emergencyContacts.map((c) => c.phone || "").filter(Boolean),
+            );
+          }
+          if (savedLocations?.length) {
+            setSavedAddresses(
+              savedLocations.map((l) => l.address || l.label || ""),
+            );
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load user data", e);
+      }
+    })();
   }, []);
 
   // ── Theme switch ────────────────────────────────────────────────────────────

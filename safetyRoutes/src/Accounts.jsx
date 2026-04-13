@@ -177,11 +177,128 @@ const Field = ({
   );
 };
 
+// const ContactCard = ({ contact, index, onChange, onDelete, dark }) => {
+//   const bg = dark ? "#0f172a" : "#f8fafc";
+//   const border = dark ? "#1e293b" : "#e2e8f0";
+//   const mutedText = dark ? "#94a3b8" : "#64748b";
+//   const mainText = dark ? "#f1f5f9" : "#0f172a";
+//   const inputStyle = {
+//     background: "transparent",
+//     border: "none",
+//     borderBottom: `1px solid ${border}`,
+//     padding: "4px 0",
+//     fontSize: 14,
+//     color: mainText,
+//     width: "100%",
+//     outline: "none",
+//   };
+
+//   return (
+//     <div
+//       style={{
+//         background: bg,
+//         border: `1px solid ${border}`,
+//         borderRadius: 12,
+//         padding: "16px",
+//         display: "flex",
+//         gap: 12,
+//         alignItems: "flex-start",
+//       }}
+//     >
+//       <div
+//         style={{
+//           width: 38,
+//           height: 38,
+//           borderRadius: "50%",
+//           background: dark ? "#1e3a5f" : "#dbeafe",
+//           display: "flex",
+//           alignItems: "center",
+//           justifyContent: "center",
+//           fontSize: 15,
+//           fontWeight: 700,
+//           color: dark ? "#93c5fd" : "#1d4ed8",
+//           flexShrink: 0,
+//           fontFamily: "'DM Serif Display', serif",
+//         }}
+//       >
+//         {contact.name ? contact.name[0].toUpperCase() : "#"}
+//       </div>
+//       <div style={{ flex: 1, minWidth: 0 }}>
+//         <input
+//           value={contact.name}
+//           onChange={(e) => onChange(index, "name", e.target.value)}
+//           placeholder="Full name"
+//           style={{
+//             ...inputStyle,
+//             fontSize: 15,
+//             fontWeight: 600,
+//             marginBottom: 6,
+//           }}
+//         />
+//         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+//           <input
+//             value={contact.relation}
+//             onChange={(e) => onChange(index, "relation", e.target.value)}
+//             placeholder="Relation"
+//             style={{
+//               ...inputStyle,
+//               flex: 1,
+//               minWidth: 80,
+//               fontSize: 13,
+//               color: mutedText,
+//             }}
+//           />
+//           <input
+//             value={contact.phone}
+//             onChange={(e) => onChange(index, "phone", e.target.value)}
+//             placeholder="Phone number"
+//             style={{ ...inputStyle, flex: 2, minWidth: 110, fontSize: 13 }}
+//             type="tel"
+//           />
+//         </div>
+//       </div>
+//       <button
+//         onClick={() => onDelete(index)}
+//         style={{
+//           background: "transparent",
+//           border: "none",
+//           cursor: "pointer",
+//           color: dark ? "#475569" : "#cbd5e1",
+//           padding: 4,
+//           borderRadius: 6,
+//           transition: "color .15s",
+//           flexShrink: 0,
+//         }}
+//         onMouseEnter={(e) => (e.currentTarget.style.color = "#ef4444")}
+//         onMouseLeave={(e) =>
+//           (e.currentTarget.style.color = dark ? "#475569" : "#cbd5e1")
+//         }
+//       >
+//         <svg
+//           width="16"
+//           height="16"
+//           fill="none"
+//           stroke="currentColor"
+//           viewBox="0 0 24 24"
+//           strokeWidth="2"
+//           strokeLinecap="round"
+//           strokeLinejoin="round"
+//         >
+//           <polyline points="3 6 5 6 21 6" />
+//           <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+//           <path d="M10 11v6M14 11v6" />
+//           <path d="M9 6V4h6v2" />
+//         </svg>
+//       </button>
+//     </div>
+//   );
+// };
 const ContactCard = ({ contact, index, onChange, onDelete, dark }) => {
   const bg = dark ? "#0f172a" : "#f8fafc";
   const border = dark ? "#1e293b" : "#e2e8f0";
   const mutedText = dark ? "#94a3b8" : "#64748b";
   const mainText = dark ? "#f1f5f9" : "#0f172a";
+
   const inputStyle = {
     background: "transparent",
     border: "none",
@@ -193,6 +310,8 @@ const ContactCard = ({ contact, index, onChange, onDelete, dark }) => {
     outline: "none",
   };
 
+  const hasPhone = contact.phone?.trim().length > 0;
+
   return (
     <div
       style={{
@@ -202,9 +321,10 @@ const ContactCard = ({ contact, index, onChange, onDelete, dark }) => {
         padding: "16px",
         display: "flex",
         gap: 12,
-        alignItems: "flex-start",
+        alignItems: "center",
       }}
     >
+      {/* Avatar */}
       <div
         style={{
           width: 38,
@@ -223,6 +343,8 @@ const ContactCard = ({ contact, index, onChange, onDelete, dark }) => {
       >
         {contact.name ? contact.name[0].toUpperCase() : "#"}
       </div>
+
+      {/* Inputs */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <input
           value={contact.name}
@@ -257,6 +379,55 @@ const ContactCard = ({ contact, index, onChange, onDelete, dark }) => {
           />
         </div>
       </div>
+
+      {/* Call button */}
+      <a
+        href={hasPhone ? `tel:${contact.phone.trim()}` : undefined}
+        title={
+          hasPhone ? `Call ${contact.name || "contact"}` : "No phone number set"
+        }
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 30,
+          height: 30,
+          borderRadius: 8,
+          background: hasPhone ? "rgba(34,197,94,0.15)" : "transparent",
+          border: `1px solid ${
+            hasPhone ? "rgba(34,197,94,0.3)" : dark ? "#334155" : "#cbd5e1"
+          }`,
+          color: hasPhone ? "#22c55e" : dark ? "#334155" : "#cbd5e1",
+          textDecoration: "none",
+          opacity: hasPhone ? 1 : 0.35,
+          pointerEvents: hasPhone ? "auto" : "none",
+          flexShrink: 0,
+          transition: "all .15s",
+        }}
+        onMouseEnter={(e) => {
+          if (hasPhone)
+            e.currentTarget.style.background = "rgba(34,197,94,0.28)";
+        }}
+        onMouseLeave={(e) => {
+          if (hasPhone)
+            e.currentTarget.style.background = "rgba(34,197,94,0.15)";
+        }}
+      >
+        <svg
+          width="13"
+          height="13"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 012 2.18 2 2 0 014 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
+        </svg>
+      </a>
+
+      {/* Delete button */}
       <button
         onClick={() => onDelete(index)}
         style={{
@@ -313,6 +484,10 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [toast, setToast] = useState(null);
+  const [savedLocations, setSavedLocations] = useState([
+    { label: "", address: "" },
+  ]);
+  const [savingLocations, setSavingLocations] = useState(false);
 
   const bg = dark ? "#0b1220" : "#f8fafc";
   const cardBg = dark ? "#111827" : "#ffffff";
@@ -324,7 +499,11 @@ export default function ProfilePage() {
     (async () => {
       try {
         const res = await API.get("/api/auth/getuser");
-        if (res.data.success) setProfile(res.data.user);
+        if (res.data.success) {
+          setProfile(res.data.user);
+        }
+        if (res.data.user.savedLocations?.length)
+          setSavedLocations(res.data.user.savedLocations);
       } catch (e) {
         console.error(e);
       } finally {
@@ -371,6 +550,23 @@ export default function ProfilePage() {
     }
   };
 
+  const saveLocations = async () => {
+    const filled = savedLocations.filter((l) => l.label.trim());
+    if (!filled.length) {
+      setToast({ msg: "Add at least one location", type: "error" });
+      return;
+    }
+    setSavingLocations(true);
+    try {
+      await API.put("/api/auth/saved-locations", { savedLocations: filled });
+      setToast({ msg: "Saved locations updated", type: "success" });
+    } catch {
+      setToast({ msg: "Failed to save locations", type: "error" });
+    } finally {
+      setSavingLocations(false);
+    }
+  };
+
   const anyEditing = Object.values(editing).some(Boolean);
 
   return (
@@ -392,7 +588,8 @@ export default function ProfilePage() {
         style={{
           minHeight: "100vh",
           background: bg,
-          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          fontFamily:
+            "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
           color: mainText,
           transition: "background .2s, color .2s",
         }}
@@ -773,6 +970,267 @@ export default function ProfilePage() {
                           <polyline points="7 3 7 8 15 8" />
                         </svg>
                         Save Emergency Contacts
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/*saved locations */}
+              {/* Saved Locations */}
+              <div
+                style={{
+                  background: cardBg,
+                  border: `1px solid ${cardBorder}`,
+                  borderRadius: 16,
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    padding: "16px 20px",
+                    borderBottom: `1px solid ${cardBorder}`,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>
+                      Saved Locations
+                    </h2>
+                    <p
+                      style={{
+                        margin: "2px 0 0",
+                        fontSize: 12,
+                        color: mutedText,
+                      }}
+                    >
+                      Appear in the Map sidebar
+                    </p>
+                  </div>
+                  <button
+                    onClick={() =>
+                      setSavedLocations([
+                        ...savedLocations,
+                        { label: "", address: "" },
+                      ])
+                    }
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      background: dark ? "#1e293b" : "#f1f5f9",
+                      border: `1px solid ${cardBorder}`,
+                      borderRadius: 8,
+                      padding: "7px 13px",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      color: mainText,
+                    }}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    >
+                      <path d="M12 4v16M4 12h16" />
+                    </svg>
+                    Add
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    padding: 16,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                  }}
+                >
+                  {savedLocations.length === 0 && (
+                    <p
+                      style={{
+                        textAlign: "center",
+                        color: mutedText,
+                        fontSize: 13,
+                        padding: "20px 0",
+                      }}
+                    >
+                      No locations saved yet
+                    </p>
+                  )}
+                  {savedLocations.map((loc, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        background: dark ? "#0f172a" : "#f8fafc",
+                        border: `1px solid ${cardBorder}`,
+                        borderRadius: 12,
+                        padding: "14px 16px",
+                        display: "flex",
+                        gap: 12,
+                        alignItems: "flex-start",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: "50%",
+                          background: dark ? "#1e3a5f" : "#dbeafe",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 16,
+                          flexShrink: 0,
+                        }}
+                      >
+                        📍
+                      </div>
+                      <div
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 6,
+                        }}
+                      >
+                        <input
+                          value={loc.label}
+                          onChange={(e) => {
+                            const u = [...savedLocations];
+                            u[i].label = e.target.value;
+                            setSavedLocations(u);
+                          }}
+                          placeholder="Label (e.g. Home, Work)"
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            borderBottom: `1px solid ${cardBorder}`,
+                            padding: "4px 0",
+                            fontSize: 14,
+                            fontWeight: 600,
+                            color: mainText,
+                            width: "100%",
+                            outline: "none",
+                          }}
+                        />
+                        <input
+                          value={loc.address}
+                          onChange={(e) => {
+                            const u = [...savedLocations];
+                            u[i].address = e.target.value;
+                            setSavedLocations(u);
+                          }}
+                          placeholder="Full address or lat,lng"
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            borderBottom: `1px solid ${cardBorder}`,
+                            padding: "4px 0",
+                            fontSize: 13,
+                            color: mutedText,
+                            width: "100%",
+                            outline: "none",
+                          }}
+                        />
+                      </div>
+                      <button
+                        onClick={() =>
+                          setSavedLocations(
+                            savedLocations.filter((_, ii) => ii !== i),
+                          )
+                        }
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          color: dark ? "#475569" : "#cbd5e1",
+                          padding: 4,
+                          borderRadius: 6,
+                          flexShrink: 0,
+                        }}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.color = "#ef4444")
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.color = dark
+                            ? "#475569"
+                            : "#cbd5e1")
+                        }
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                          <path d="M10 11v6M14 11v6" />
+                          <path d="M9 6V4h6v2" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div
+                  style={{
+                    padding: "12px 16px",
+                    borderTop: `1px solid ${cardBorder}`,
+                  }}
+                >
+                  <button
+                    className="sy-btn-primary"
+                    onClick={saveLocations}
+                    disabled={savingLocations}
+                    style={{
+                      width: "100%",
+                      background: "#3b82f6",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 10,
+                      padding: "12px",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                    }}
+                  >
+                    {savingLocations ? (
+                      "Saving…"
+                    ) : (
+                      <>
+                        <svg
+                          width="15"
+                          height="15"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                          <polyline points="17 21 17 13 7 13 7 21" />
+                          <polyline points="7 3 7 8 15 8" />
+                        </svg>
+                        Save Locations
                       </>
                     )}
                   </button>
