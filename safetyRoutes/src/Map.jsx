@@ -1098,6 +1098,7 @@ export default function Map() {
       //alt routes
       const alternates = altData["alternate_routes"];
       const altColors = ["#6a7fdb", "#f97316"];
+      const allPolylines = [];
 
       if (Array.isArray(alternates) && alternates.length > 0) {
         alternates.forEach((route, i) => {
@@ -1107,17 +1108,7 @@ export default function Map() {
             weight: 4,
             opacity: 0.65,
           }).addTo(map);
-          p.on("mouseover", () => {
-            p.setStyle({ weight: 7, opacity: 1 });
-            p.getElement()?.style.setProperty(
-              "filter",
-              `drop-shadow(0 0 6px ${color})`,
-            );
-          });
-          p.on("mouseout", () => {
-            p.setStyle({ weight: 4, opacity: 0.65 });
-            p.getElement()?.style.setProperty("filter", "none");
-          });
+          allPolylines.push({ poly: p, color, weight: 4, opacity: 0.65 });
           routeLayersRef.current.push(p);
         });
       }
@@ -1128,37 +1119,109 @@ export default function Map() {
         weight: 6,
         opacity: 0.95,
       }).addTo(map);
-      safePoly.on("mouseover", () => {
-        safePoly.setStyle({ weight: 10, opacity: 1 });
-        safePoly
-          .getElement()
-          ?.style.setProperty("filter", "drop-shadow(0 0 8px #22c55e)");
-      });
-      safePoly.on("mouseout", () => {
-        safePoly.setStyle({ weight: 6, opacity: 0.95 });
-        safePoly.getElement()?.style.setProperty("filter", "none");
+      allPolylines.push({
+        poly: safePoly,
+        color: "#22c55e",
+        weight: 6,
+        opacity: 0.95,
       });
       routeLayersRef.current.push(safePoly);
 
-      // Markers
-      const startM = L.circleMarker(safeRoute[0], {
-        radius: 9,
-        fillColor: SUCCESS,
-        color: "#fff",
-        weight: 2.5,
-        fillOpacity: 1,
-      })
-        .addTo(map)
-        .bindPopup("📍 <b>Start</b>")
-        .openPopup();
+      // Attach hover events after all polylines are created
+      allPolylines.forEach(({ poly, color, weight, opacity }) => {
+        poly.on("mouseover", () => {
+          allPolylines.forEach(({ poly: other, weight: ow }) => {
+            if (other !== poly) {
+              other.setStyle({ opacity: 0.15, weight: ow });
+              other.getElement()?.style.setProperty("filter", "none");
+            }
+          });
+          poly.setStyle({ weight: weight + 3, opacity: 1 });
+          poly
+            .getElement()
+            ?.style.setProperty("filter", `drop-shadow(0 0 8px ${color})`);
+        });
+
+        poly.on("mouseout", () => {
+          allPolylines.forEach(({ poly: other, weight: ow, opacity: oo }) => {
+            other.setStyle({ weight: ow, opacity: oo });
+            other.getElement()?.style.setProperty("filter", "none");
+          });
+        });
+      });
+
+      // Start marker
+      const startIcon = L.divIcon({
+        className: "",
+        html: `
+    <div style="
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    ">
+      <div style="
+        width: 18px; height: 18px;
+        background: #22c55e;
+        border: 3px solid #fff;
+        border-radius: 50%;
+        box-shadow: 0 0 0 3px rgba(34,197,94,0.4), 0 4px 12px rgba(0,0,0,0.3);
+      "></div>
+    </div>
+  `,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+      });
+
+      const startM = L.marker(safeRoute[0], { icon: startIcon }).addTo(map)
+        .bindPopup(`
+    <div style="font-family:system-ui;padding:4px 2px">
+      <div style="font-weight:700;font-size:13px;color:#22c55e">📍 Start</div>
+      <div style="font-size:11px;color:#64748b;margin-top:2px">${safeRoute[0][0].toFixed(4)}, ${safeRoute[0][1].toFixed(4)}</div>
+    </div>
+  `);
       routeLayersRef.current.push(startM);
 
-      const endM = L.marker(safeRoute[safeRoute.length - 1])
-        .addTo(map)
-        .bindPopup("🏁 <b>Destination</b>");
-      routeLayersRef.current.push(endM);
+      // End marker
+      const endIcon = L.divIcon({
+        className: "",
+        html: `
+    <div style="
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    ">
+      <div style="
+        width: 32px; height: 32px;
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        border: 3px solid #fff;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        box-shadow: 0 4px 14px rgba(59,130,246,0.5), 0 2px 6px rgba(0,0,0,0.3);
+      ">
+        <div style="
+          position: absolute; inset: 0;
+          display: flex; align-items: center; justify-content: center;
+          transform: rotate(45deg);
+          font-size: 13px;
+        ">🏁</div>
+      </div>
+    </div>
+  `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+      });
 
-      map.fitBounds(safePoly.getBounds(), { padding: [60, 60] });
+      const endM = L.marker(safeRoute[safeRoute.length - 1], {
+        icon: endIcon,
+      }).addTo(map).bindPopup(`
+    <div style="font-family:system-ui;padding:4px 2px">
+      <div style="font-weight:700;font-size:13px;color:#3b82f6">🏁 Destination</div>
+      <div style="font-size:11px;color:#64748b;margin-top:2px">${safeRoute[safeRoute.length - 1][0].toFixed(4)}, ${safeRoute[safeRoute.length - 1][1].toFixed(4)}</div>
+    </div>
+  `);
+      routeLayersRef.current.push(endM);
 
       // User tracking
       if (navigator.geolocation) {
