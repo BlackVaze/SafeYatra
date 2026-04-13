@@ -1161,6 +1161,7 @@ export default function Map() {
         });
 
         poly.on("click", () => {
+          L.DomEvent.stopPropagation(e);
           if (selectedRouteRef.current === poly) {
             // clicking same route deselects it
             selectedRouteRef.current = null;
