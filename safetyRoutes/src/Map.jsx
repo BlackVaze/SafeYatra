@@ -1027,6 +1027,7 @@ export default function Map() {
       } catch (_) {}
     });
     routeLayersRef.current = [];
+    selectedRouteRef.current = null;
 
     // Parse start
     let startCoords;
